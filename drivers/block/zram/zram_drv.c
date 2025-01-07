@@ -3433,7 +3433,8 @@ static void zram_reset_device(struct zram *zram)
 	/* I/O operation under all of CPU are done so let's free */
 	zram_meta_free(zram, disksize);
 	memset(&zram->stats, 0, sizeof(zram->stats));
-	zcomp_destroy(comp);
+	if (comp)
+		zcomp_destroy(comp);
 	reset_bdev(zram);
 }
 
