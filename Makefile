@@ -546,8 +546,12 @@ KBUILD_CFLAGS   := -Wall -Wundef -Werror=strict-prototypes -Wno-trigraphs \
 		   -Werror=return-type -Wno-format-security \
 		   -std=gnu89
 ifdef CONFIG_CC_IS_CLANG
-KBUILD_CFLAGS += -mcpu=cortex-a715+crypto -mtune=cortex-a715
-KBUILD_CFLAGS += -mlittle-endian -mbranch-protection=standard
+KBUILD_CFLAGS += -mcpu=cortex-a715+crypto+fp16+dotprod
+KBUILD_CFLAGS += -mtune=cortex-x3
+KBUILD_CFLAGS += -march=armv9-a
+KBUILD_CFLAGS += -mlittle-endian
+KBUILD_CFLAGS += -mbranch-protection=standard
+KBUILD_CFLAGS += -fstrict-aliasing -fno-omit-frame-pointer -fno-strict-overflow
 endif
 KBUILD_CPPFLAGS := -D__KERNEL__
 KBUILD_AFLAGS_KERNEL :=
@@ -803,35 +807,6 @@ else ifdef CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE_O3
 KBUILD_CFLAGS += -O3
 else ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS += -Os
-endif
-
-ifdef CONFIG_LLVM_POLLY
-KBUILD_CFLAGS	+= -mllvm -polly \
-		   -mllvm -polly-run-inliner \
-		   -mllvm -polly-ast-use-context \
-		   -mllvm -polly-detect-keep-going \
-		   -mllvm -polly-invariant-load-hoisting \
-		   -mllvm -polly-vectorizer=stripmine
-
-ifeq ($(shell test $(CONFIG_CLANG_VERSION) -gt 130000; echo $$?),0)
-KBUILD_CFLAGS	+= -mllvm -polly-loopfusion-greedy=1 \
-		   -mllvm -polly-reschedule=1 \
-		   -mllvm -polly-postopts=1 \
-		   -mllvm -polly-num-threads=0 \
-		   -mllvm -polly-omp-backend=LLVM \
-		   -mllvm -polly-scheduling=dynamic \
-		   -mllvm -polly-scheduling-chunksize=1
-else
-KBUILD_CFLAGS	+= -mllvm -polly-opt-fusion=max
-endif
-
-# Polly may optimise loops with dead paths beyound what the linker
-# can understand. This may negate the effect of the linker's DCE
-# so we tell Polly to perfom proven DCE on the loops it optimises
-# in order to preserve the overall effect of the linker's DCE.
-ifdef CONFIG_LD_DEAD_CODE_DATA_ELIMINATION
-POLLY_FLAGS	+= -mllvm -polly-run-dce
-endif
 endif
 
 # Tell gcc to never replace conditional load with a non-conditional one
