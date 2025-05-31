@@ -1,7 +1,7 @@
 From AKM
 ===============================
 
-This repository contains multiple branches of a Samsung SM8550-based kernel, including upstream merges, stock-based trees, and custom patches such as KernelSU and SUSFS integration.
+This repository contains multiple branches of a Samsung SM8550-based kernel, including upstream merges, stock-based trees, and custom build script that auto enables and adds support for KernelSU/KernelSU-Next/SukiSU-Ultra with SUSFS on runtime. Huge Thanks to Edgars-Cirulis for the base.
 
 ---
 
@@ -9,11 +9,12 @@ This repository contains multiple branches of a Samsung SM8550-based kernel, inc
 
 | Branch Name                      | Description                                                                                     |
 |----------------------------------|-------------------------------------------------------------------------------------------------|
-| **A-15_Upstream_Merged**         | Based on `A15_Stock_CLO` but merged with the latest AOSP upstream (GKI).         |
-| **A15_Stock_CLO**                | Stock kernel merged with latest Code Linaro base + cherry-picks of my custom commits.    |
-| **A14_Stock_CLO**                | Final Edgars-Cirulis's “CLO” release for OneUI 6.1 (kernel 5.15.148).             |
-| **A-14_Upstream_Merged**         | Based on `A14_Stock_CLO` but with AOSP upstream merged.                               |
-| **Old_AOSP_Merged_with_KSUN**    | Legacy branch mixing `A14_Stock_CLO` with older SUSFS & KernelSU patches (no longer used).     |
+| **A15_Upstream_Merged**          | Based on `A15_Stock_CLO-5.15.170` but merged with the latest AOSP upstream (GKI) + some cherry-picked commits of mine.         |
+| **A15_Stock_CLO-5.15.153**       | Stock kernel with some cherry-picks of my custom commits.   |
+| **A15_Stock_CLO-5.15.167**       | Stock kernel merged with Code_Linaro ( 'KERNEL.PLATFORM.2.0.r1-19900-kernel.0') Upstream + some cherry-picked commits of mine.   |
+| **A15_Stock_CLO-5.15.170**       | `A15_Stock_CLO-5.15.167` branch merged with Code_Linaro ('KERNEL.PLATFORM.2.0.r29-00300-kernel.0') Upstream + some cherry-picked commits of mine.   |
+| **A14_Stock_CLO-5.15.148**       | Final Stock CLO base release for OneUI 6.1 (kernel 5.15.148) + some cherry-picked commits of mine.             |
+| **A14_Upstream_Merged**          | Based on `A14_Stock_CLO-5.15.148` but with AOSP upstream merged + some cherry-picked commits of mine.                             |
 | **android13-5.15**               | Pure copy of Edgars-Cirulis's “android13-5.15” branch—no extra commits.                      |
 
 ---
@@ -38,6 +39,7 @@ This repository contains multiple branches of a Samsung SM8550-based kernel, inc
 | `SUSFS_CHECKOUT_HASH` | (Optional) Specific SUSFS commit SHA to checkout. Set it to empty string to fetch latest release .   | SHA or `""` |
 | `ENABLE_KSU_NEXT`     | Enable KernelSU-Next integration                                | `0` / `1`   |
 | `KSU_NEXT_STABLE`     | If using KernelSU-Next, pick stable (`1`) or dev (`0`) branches | `0` / `1`   |
+| `KSU_NEXT_MANUAL_HOOKS` | If using KernelSU-Next, use it to apply Manual Hook patch to switch Hook mode from kprobes to Manual. | `0` / `1`   |
 | `KSUN_CHECKOUT_HASH`  | (Optional) Specific KernelSU-Next commit SHA to checkout. Set it to empty string to fetch latest release.   | SHA or `""` |
 | `ENABLE_SUKISU`       | Enable SukiSU-Ultra integration                                 | `0` / `1`   |
 | `SUKI_CHECKOUT_HASH`  | (Optional) Specific SukiSU Ultra commit SHA. Set it to empty string to fetch latest release.          | SHA or `""` |
