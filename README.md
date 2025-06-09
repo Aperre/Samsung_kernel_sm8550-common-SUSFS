@@ -16,6 +16,7 @@ This repository contains multiple branches of a Samsung SM8550-based kernel, inc
 | **A14_Stock_CLO-5.15.148**       | Final Stock CLO base release for OneUI 6.1 (kernel 5.15.148) + some cherry-picked commits of mine.             |
 | **A14_Upstream_Merged**          | Based on `A14_Stock_CLO-5.15.148` but with AOSP upstream merged + some cherry-picked commits of mine.                             |
 | **android13-5.15**               | Pure copy of Edgars-Cirulis's “android13-5.15” branch—no extra commits.                      |
+| **Kalama_A15_Full-CLO_Upstream-Merged**  | Experimental branch of mine where I test out commits. Thanks to Chaptsand for full CLO base. This branch may not always be in a ready to compile state and sometimes compiling and flashing may cause bootloops so please procede with caution before using this branch |
 
 ---
 ## 🛠️ Build Instructions
