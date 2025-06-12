@@ -76,9 +76,7 @@ KSUN_CHECKOUT_HASH=""
 
 # ====================================== # | SUKISU-Ultra Options
 ENABLE_SUKISU=1                # 1=Use SUKISU                           | 0=Skip
-SUKISU_STABLE=0                # 1=Use SUKISU SUSFS Stable branches    | 0=Use SUKISU SUSFS Development branches. | (Only works if ENABLE_SUKISU=1)
 SUKI_MANUAL_HOOKS=1
-# Setting Checkout hash ignores / disables SUKISU_STABLE
 # If set, script will checkout this specific commit SHA, resulting in a detached HEAD regardless of branch selected.
 SUKI_CHECKOUT_HASH=""
 
@@ -660,25 +658,13 @@ Enable_SUKISU-ultra() {
     cd $KERNELDIR
     if [[ "$ENABLE_SUKISU" == "1" ]]; then
         if [[ "$PATCH_SUSFS" == "1" ]]; then
-
-            if [[ "$SUKISU_STABLE" == "1" ]]; then
-                echo -e "${blue}Cloning SUKISU (SUSFS) Stable branch and setting it up .... …${nocol}"
-                curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s susfs-stable
-                if [[ -n "$SUKI_CHECKOUT_HASH" ]]; then
-                    echo -e "${blue}[SUKISU SUSFS Stable: Checkout hash set, Switching to detached head..] Checking out commit $SUKI_CHECKOUT_HASH…${nocol}"
-                    (cd KernelSU && git checkout "$SUKI_CHECKOUT_HASH") \
-                        || { echo -e "${red}[SUKISU_SUSFS_Stable:] Checkout $SUKI_CHECKOUT_HASH failed${nocol}"; exit 1; }
-                    cd "$KERNELDIR" || exit 1
-                fi
-            else
-                echo -e "${blue}Cloning SUKISU (SUSFS) Development branch and setting it up .... …${nocol}"
-                curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s susfs-dev
-                if [[ -n "$SUKI_CHECKOUT_HASH" ]]; then
-                    echo -e "${blue}[SUKISU SUSFS: Checkout hash set, Switching to detached head..] Checking out commit $SUKI_CHECKOUT_HASH…${nocol}"
-                    (cd KernelSU && git checkout "$SUKI_CHECKOUT_HASH") \
-                        || { echo -e "${red}[SUKISU_SUSFS_Development:] Checkout $SUKI_CHECKOUT_HASH failed${nocol}"; exit 1; }
-                    cd "$KERNELDIR" || exit 1
-                fi
+            echo -e "${blue}Cloning SUKISU-Ultra (SUSFS) main branch and setting it up .... …${nocol}"
+            curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s susfs-main
+            if [[ -n "$SUKI_CHECKOUT_HASH" ]]; then
+                echo -e "${blue}[SUKISU SUSFS main: Checkout hash set, Switching to detached head..] Checking out commit $SUKI_CHECKOUT_HASH…${nocol}"
+                (cd KernelSU && git checkout "$SUKI_CHECKOUT_HASH") \
+                    || { echo -e "${red}[SUKISU_SUSFS_main:] Checkout $SUKI_CHECKOUT_HASH failed${nocol}"; exit 1; }
+                cd "$KERNELDIR" || exit 1
             fi
             echo -e "${green}SUKISU (SUSFS) framework clonning and setup done!.${nocol}"
             echo -e "${blue}Enabling KPM in defconfig .... …${nocol}"
