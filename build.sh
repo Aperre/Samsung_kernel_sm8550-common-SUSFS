@@ -930,6 +930,9 @@ Enable_SUKISU-ultra() {
                     ./scripts/config \
                         --file "arch/${ARCH}/configs/${KERNEL_DEFCONFIG}" \
                         --disable KSU_SUSFS_ENABLE_LOG
+                    ./scripts/config \
+                        --file "arch/${ARCH}/configs/${KERNEL_DEFCONFIG}" \
+                        --enable CONFIG_KSU_SUSFS
                 fi
             else
                 echo -e "${red}ERROR: SUKISU Manual Hook Patch did not apply cleanly. Aborting.${nocol}"
