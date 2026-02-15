@@ -1,0 +1,15 @@
+diff --git a/susfs4ksu/kernel_patches/50_add_susfs_in_gki-android13-5.15.patch b/susfs4ksu/kernel_patches/50_add_susfs_in_gki-android13-5.15.patch
+--- a/susfs4ksu/kernel_patches/50_add_susfs_in_gki-android13-5.15.patch
++++ b/susfs4ksu/kernel_patches/50_add_susfs_in_gki-android13-5.15.patch
+@@ -1,12 +1,9 @@
+-@@ -3462,6 +3658,9 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
++@@ -3462,3 +3658,6 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
+      copy_flags = CL_COPY_UNBINDABLE | CL_EXPIRE;
+      if (user_ns != ns->user_ns)
+          copy_flags |= CL_SHARED_TO_SLAVE;
+ +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+ +	copy_flags |= CL_COPY_MNT_NS;
+ +#endif
+- 	new = copy_tree(old, old->mnt.mnt_root, copy_flags);
+- 	if (IS_ERR(new)) {
+- 		namespace_unlock();

@@ -729,6 +729,17 @@ SUSFS_Patch() {
         echo -e "${yellow}Copying SUSFS filesystem and headers…${nocol}"
         cp susfs4ksu/kernel_patches/fs/* fs/
         cp susfs4ksu/kernel_patches/include/linux/* include/linux/
+        
+
+        # 2.5) Apply the SUSFS fix patch, with conflict handling
+        echo -e "${yellow}Applying SUSFS Fix patch…${nocol}"
+        cp susfs_fix.diff susfs_fix.patch
+        if patch -p1 --fuzz=3 < susfs_fix.patch; then
+            echo -e "${green}SUSFS Fix patch applied successfully.${nocol}"
+        else
+            echo -e "${red}SUSFS Fix patch failed with conflicts. Exiting.${nocol}" >&2
+            exit 1
+        fi
 
         # 3) Copy the actual patch file
         echo -e "${yellow}Copying SUSFS patch file…${nocol}"
