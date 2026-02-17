@@ -4149,6 +4149,7 @@ static int check_swap_activate(struct swap_info_struct *sis,
 
 	while (cur_lblock < last_lblock && cur_lblock < sis->max) {
 		struct f2fs_map_blocks map;
+		bool last_extent = false;
 retry:
 		cond_resched();
 
@@ -4174,8 +4175,9 @@ retry:
 		pblock = map.m_pblk;
 		nr_pblocks = map.m_len;
 
-		if ((pblock - SM_I(sbi)->main_blkaddr) & sec_blks_mask ||
-				nr_pblocks & sec_blks_mask) {
+		if (!last_extent &&
+				((pblock - SM_I(sbi)->main_blkaddr) & sec_blks_mask ||
+				nr_pblocks & sec_blks_mask)) {
 			not_aligned++;
 
 			nr_pblocks = roundup(nr_pblocks, blks_per_sec);
@@ -4184,15 +4186,17 @@ retry:
 
 			if (!nr_pblocks) {
 				/* this extent is last one */
-				nr_pblocks = map.m_len;
+				nr_pblocks = last_lblock - cur_lblock;
+				last_extent = true;
 				f2fs_warn(sbi, "Swapfile: last extent is not aligned to section");
-				goto next;
 			}
 
 			ret = f2fs_migrate_blocks(inode, cur_lblock,
 							nr_pblocks);
 			if (ret)
 				goto out;
+
+			/* lookup block mapping info after block migration */
 			goto retry;
 		}
 next:
