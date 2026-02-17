@@ -920,7 +920,7 @@ Enable_SUKISU-ultra() {
     if [[ "$ENABLE_SUKISU" == "1" ]]; then
         if [[ "$PATCH_SUSFS" == "1" ]]; then
             echo -e "${blue}Cloning SUKISU-Ultra (SUSFS) main branch and setting it up .... …${nocol}"
-            curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s builtin
+            curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash
             if [[ -n "$SUKI_CHECKOUT_HASH" ]]; then
                 echo -e "${blue}[SUKISU SUSFS main: Checkout hash set, Switching to detached head..] Checking out commit $SUKI_CHECKOUT_HASH…${nocol}"
                 (cd KernelSU && git checkout "$SUKI_CHECKOUT_HASH") \
@@ -939,7 +939,7 @@ Enable_SUKISU-ultra() {
             fi
         else
             echo -e "${blue}Cloning SUKISU and setting it up .... …${nocol}"
-            curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s main
+            curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash
             if [[ -n "$SUKI_CHECKOUT_HASH" ]]; then
                 echo -e "${blue}[SUKISU: Checkout hash set, Switching to detached head..] Checking out commit $SUKI_CHECKOUT_HASH…${nocol}"
                 (cd KernelSU && git checkout "$SUKI_CHECKOUT_HASH") \
