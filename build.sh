@@ -98,8 +98,8 @@ ENABLE_SUKISU=1          # Use SUKISU-Ultra? (1 = yes, 0 = no)
 SUKI_MANUAL_HOOKS=1      # Manual Hooks for SUKISU (SUSFS version only) (1 = manual, 0 = default)
 SUKI_TRACEPOINTS_HOOK=0  # Use tracepoint hook for Sukisu-Ultra (for SUSFS and Normal ver) (1 = enable, 0 = disabled)
 SUKI_CHECKOUT_HASH=""    # Specific SUKISU commit SHA
-PATCH_KPM=1              # Patches the kernel binary after its done compiling.
-KPM_VERSION="0.12.0"     # Release tag of KPM binary
+PATCH_KPM=0              # Patches the kernel binary after its done compiling.
+KPM_VERSION="0.13.0"     # Release tag of KPM binary
 
 ## KernelSU Options     | Note KernelSU-Next removed SUSFS support from their branch
 ENABLE_KSU=0             # Use original KernelSU? (1 = yes, 0 = no)
@@ -959,13 +959,13 @@ Enable_SUKISU-ultra() {
         fi
         if [[ "$SUKI_MANUAL_HOOKS" == "1" ]]; then
             log_section "Started Applying SUKISU Manual Hook Patches "
-            if ! cp KSUN_Manual-Hooks.diff KSUN_Manual-Hooks.patch; then
+            if ! cp ReSukiSU_Manual-Hooks.diff ReSukiSU_Manual-Hooks.patch; then
                 echo -e "${red}Manual hook patch not found in $KERNELDIR ! Aborting.${nocol}"
                 exit 1
             fi
-            if patch -p1 --fuzz=3 < KSUN_Manual-Hooks.patch; then
+            if patch -p1 --fuzz=3 < ReSukiSU_Manual-Hooks.patch; then
                 echo -e "${green}SUKISU Manual Hook Patch applied successfully.${nocol}"
-                rm -f KSUN_Manual-Hooks.patch
+                rm -f ReSukiSU_Manual-Hooks.patch
                 echo -e "${blue}Making necessary defconfig changes .... …${nocol}"
                 ./scripts/config \
                     --file "arch/${ARCH}/configs/${KERNEL_DEFCONFIG}" \

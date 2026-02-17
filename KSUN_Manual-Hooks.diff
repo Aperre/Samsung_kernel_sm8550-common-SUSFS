@@ -110,28 +110,28 @@ index cf8feee1d18d..15fbd1c8e4c5 100644
  	return do_faccessat(dfd, filename, mode, 0);
  }
  
-# diff --git a/fs/read_write.c b/fs/read_write.c
-# index 95e19b392797..4ea867a4c39d 100644
-# --- a/fs/read_write.c
-# +++ b/fs/read_write.c
-# @@ -636,8 +636,18 @@ ssize_t ksys_read(unsigned int fd, char __user *buf, size_t count)
-#  	return ret;
-#  }
+diff --git a/fs/read_write.c b/fs/read_write.c
+index 95e19b392797..4ea867a4c39d 100644
+--- a/fs/read_write.c
++++ b/fs/read_write.c
+@@ -636,8 +636,18 @@ ssize_t ksys_read(unsigned int fd, char __user *buf, size_t count)
+ 	return ret;
+ }
  
-# +#if defined(CONFIG_KSU) && !defined(CONFIG_KSU_WITH_KPROBES)
-# +extern bool ksu_vfs_read_hook __read_mostly;
-# +extern int ksu_handle_sys_read(unsigned int fd, char __user **buf_ptr,
-# +			size_t *count_ptr);
-# +#endif
-# +
-#  SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count)
-#  {
-# +#if defined(CONFIG_KSU) && !defined(CONFIG_KSU_WITH_KPROBES)
-# +	if (unlikely(ksu_vfs_read_hook)) 
-# +		ksu_handle_sys_read(fd, &buf, &count);
-# +#endif
-#  	return ksys_read(fd, buf, count);
-#  }
++#if defined(CONFIG_KSU) && !defined(CONFIG_KSU_WITH_KPROBES)
++extern bool ksu_vfs_read_hook __read_mostly;
++extern int ksu_handle_sys_read(unsigned int fd, char __user **buf_ptr,
++			size_t *count_ptr);
++#endif
++
+ SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count)
+ {
++#if defined(CONFIG_KSU) && !defined(CONFIG_KSU_WITH_KPROBES)
++	if (unlikely(ksu_vfs_read_hook)) 
++		ksu_handle_sys_read(fd, &buf, &count);
++#endif
+ 	return ksys_read(fd, buf, count);
+ }
  
 diff --git a/fs/stat.c b/fs/stat.c
 index a66a9cd47f4a..767aedf7425f 100644

@@ -1,5 +1,5 @@
---- ./50_add_susfs_in_gki-android13-5.15.patch	2026-02-15 16:08:48.430199823 +0000
-+++ ./50_add_susfs_in_gki-android13-5.15.patch.fixed	2026-02-15 16:09:19.841538095 +0000
+--- a/50_add_susfs_in_gki-android13-5.15.patch	2026-02-16 18:45:11.374238280 +0000
++++ b/50_add_susfs_in_gki-android13-5.15.patch	2026-02-16 18:44:02.936058397 +0000
 @@ -697,9 +697,9 @@
  +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
  +	copy_flags |= CL_COPY_MNT_NS;
@@ -13,3 +13,20 @@
  @@ -4669,3 +4868,42 @@ const struct proc_ns_operations mntns_operations = {
   	.install	= mntns_install,
   	.owner		= mntns_owner,
+@@ -1273,14 +1273,14 @@
+  	return ret;
+  }
+  
+-+#ifdef CONFIG_KSU_SUSFS
+++#if defined(CONFIG_KSU_SUSFS) && !defined(CONFIG_KSU_MANUAL_HOOK)
+ +extern bool ksu_init_rc_hook __read_mostly;
+ +extern __attribute__((cold)) void ksu_handle_sys_read(unsigned int fd);
+ +#endif
+ +
+  SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count)
+  {
+-+#ifdef CONFIG_KSU_SUSFS
+++#if defined(CONFIG_KSU_SUSFS) && !defined(CONFIG_KSU_MANUAL_HOOK)
+ +	if (unlikely(ksu_init_rc_hook))
+ +		ksu_handle_sys_read(fd);
+ +#endif
