@@ -95,7 +95,9 @@ KSUN_CHECKOUT_HASH=""    # Specific KernelSU-Next commit SHA
 
 ## SUKISU-Ultra Options
 ENABLE_SUKISU=1          # Use SUKISU-Ultra? (1 = yes, 0 = no)
-SUKI_MANUAL_HOOKS=0      # Manual Hooks for SUKISU (SUSFS version only) (1 = manual, 0 = default)
+ENABLE_SUKISU_ULTRA=0    # Toggle SUKISU source: SukiSU-Ultra (1 = yes, 0 = no)
+ENABLE_RESUKISU=1        # Toggle SUKISU source: ReSukiSU (1 = yes, 0 = no)
+SUKI_MANUAL_HOOKS=1      # Manual Hooks for SUKISU (SUSFS version only) (1 = manual, 0 = default)
 SUKI_TRACEPOINTS_HOOK=0  # Use tracepoint hook for Sukisu-Ultra (for SUSFS and Normal ver) (1 = enable, 0 = disabled)
 SUKI_CHECKOUT_HASH=""    # Specific SUKISU commit SHA
 PATCH_KPM=1              # Patches the kernel binary after its done compiling.
@@ -151,6 +153,16 @@ if [[ "$ENABLE_SUKISU" != "1" && "$ENABLE_SUKISU" != "0" ]]; then
     ENABLE_SUKISU=0
 fi
 
+if [[ "$ENABLE_SUKISU_ULTRA" != "1" && "$ENABLE_SUKISU_ULTRA" != "0" ]]; then
+    echo -e "${yellow}Invalid ENABLE_SUKISU_ULTRA variable value; defaulting to 0${nocol}" >&2
+    ENABLE_SUKISU_ULTRA=0
+fi
+
+if [[ "$ENABLE_RESUKISU" != "1" && "$ENABLE_RESUKISU" != "0" ]]; then
+    echo -e "${yellow}Invalid ENABLE_RESUKISU variable value; defaulting to 1${nocol}" >&2
+    ENABLE_RESUKISU=1
+fi
+
 if [[ "$ENABLE_KSU" != "1" && "$ENABLE_KSU" != "0" ]]; then
     echo -e "${yellow}Invalid ENABLE_KSU variable value; defaulting to 0${nocol}" >&2
     ENABLE_KSU=0
@@ -159,6 +171,30 @@ fi
 if [[ "$PATCH_SUSFS" != "1" && "$PATCH_SUSFS" != "0" ]]; then
     echo -e "${yellow}Invalid PATCH_SUSFS variable value; defaulting to 0${nocol}" >&2
     PATCH_SUSFS=0
+fi
+
+# SUKISU source toggle validation (only one source can be selected)
+if [[ "$ENABLE_SUKISU" == "1" ]]; then
+    if [[ "$ENABLE_SUKISU_ULTRA" == "1" && "$ENABLE_RESUKISU" == "1" ]]; then
+        echo -e "${red}Error:${nocol} Only one SUKISU source can be enabled: ENABLE_SUKISU_ULTRA or ENABLE_RESUKISU." >&2
+        exit 1
+    fi
+
+    if [[ "$ENABLE_SUKISU_ULTRA" == "0" && "$ENABLE_RESUKISU" == "0" ]]; then
+        echo -e "${blue}Note:${nocol} No SUKISU source selected; defaulting to ReSukiSU."
+        ENABLE_RESUKISU=1
+    fi
+else
+    ENABLE_SUKISU_ULTRA=0
+    ENABLE_RESUKISU=0
+fi
+
+if [[ "$ENABLE_SUKISU_ULTRA" == "1" ]]; then
+    SUKISU_VARIANT_NAME="SukiSU-Ultra"
+    SUKISU_SETUP_URL="https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh"
+else
+    SUKISU_VARIANT_NAME="ReSukiSU"
+    SUKISU_SETUP_URL="https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh"
 fi
 
 # KernelSU-Next removed SUSFS branches, so if using KernelSU-Next do not apply susfs patches
@@ -359,7 +395,7 @@ error_handler() {
 
     echo
     echo -e "  ${blue}# If you used SUKISU:${nocol}"
-    echo -e "  ${nocol}curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s -- --cleanup${nocol}"
+    echo -e "  ${nocol}curl -LSs \"${SUKISU_SETUP_URL}\" | bash -s -- --cleanup${nocol}"
     echo
 
     echo 
@@ -919,15 +955,15 @@ Enable_SUKISU-ultra() {
     cd $KERNELDIR
     if [[ "$ENABLE_SUKISU" == "1" ]]; then
         if [[ "$PATCH_SUSFS" == "1" ]]; then
-            echo -e "${blue}Cloning SUKISU-Ultra (SUSFS) main branch and setting it up .... …${nocol}"
-            curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash
+            echo -e "${blue}Cloning ${SUKISU_VARIANT_NAME} (SUSFS) main branch and setting it up .... …${nocol}"
+            curl -LSs "${SUKISU_SETUP_URL}" | bash
             if [[ -n "$SUKI_CHECKOUT_HASH" ]]; then
                 echo -e "${blue}[SUKISU SUSFS main: Checkout hash set, Switching to detached head..] Checking out commit $SUKI_CHECKOUT_HASH…${nocol}"
                 (cd KernelSU && git checkout "$SUKI_CHECKOUT_HASH") \
                     || { echo -e "${red}[SUKISU_SUSFS_main:] Checkout $SUKI_CHECKOUT_HASH failed${nocol}"; exit 1; }
                 cd "$KERNELDIR" || exit 1
             fi
-            echo -e "${green}SUKISU (SUSFS) framework clonning and setup done!.${nocol}"
+            echo -e "${green}${SUKISU_VARIANT_NAME} (SUSFS) framework clonning and setup done!.${nocol}"
             if [[ "$PATCH_KPM" == "1" ]]; then
                 echo -e "${blue}Enabling KPM in defconfig .... …${nocol}"
                 ./scripts/config \
@@ -938,15 +974,15 @@ Enable_SUKISU-ultra() {
                 read -p "Breakpoint after Cloning SUKISU SUSFS Detected! Press Enter to continue..."
             fi
         else
-            echo -e "${blue}Cloning SUKISU and setting it up .... …${nocol}"
-            curl -LSs "https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh" | bash
+            echo -e "${blue}Cloning ${SUKISU_VARIANT_NAME} and setting it up .... …${nocol}"
+            curl -LSs "${SUKISU_SETUP_URL}" | bash
             if [[ -n "$SUKI_CHECKOUT_HASH" ]]; then
                 echo -e "${blue}[SUKISU: Checkout hash set, Switching to detached head..] Checking out commit $SUKI_CHECKOUT_HASH…${nocol}"
                 (cd KernelSU && git checkout "$SUKI_CHECKOUT_HASH") \
                     || { echo -e "${red}[SUKISU:] Checkout $SUKI_CHECKOUT_HASH failed${nocol}"; exit 1; }
                 cd "$KERNELDIR" || exit 1
             fi
-            echo -e "${green}SUKISU framework clonning and setup done!.${nocol}"
+            echo -e "${green}${SUKISU_VARIANT_NAME} framework clonning and setup done!.${nocol}"
             if [[ "$PATCH_KPM" == "1" ]]; then
                 echo -e "${blue}Enabling KPM in defconfig .... …${nocol}"
                 ./scripts/config \
@@ -976,7 +1012,7 @@ Enable_SUKISU-ultra() {
                 if [[ "$PATCH_SUSFS" == "1" ]]; then
                     ./scripts/config \
                         --file "arch/${ARCH}/configs/${KERNEL_DEFCONFIG}" \
-                        --disable KSU_SUSFS_SUS_SU
+                        --enable KSU_SUSFS_SUS_SU
                     ./scripts/config \
                         --file "arch/${ARCH}/configs/${KERNEL_DEFCONFIG}" \
                         --disable KSU_SUSFS_ENABLE_LOG
@@ -1097,7 +1133,7 @@ Final_CLEANUP() {
     if [[ "$ENABLE_SUKISU" == "1" ]]; then
         log_section "Final Clean: Removing SUKISU Framework"
         curl -fsSL \
-          "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" \
+            "$SUKISU_SETUP_URL" \
           | bash -s -- --cleanup \
           || { echo -e "${red}KernelSU-Next cleanup failed!${nocol}"; exit 1; }
     fi
