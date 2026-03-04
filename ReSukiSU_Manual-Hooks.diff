@@ -4,7 +4,7 @@
  	return retval;
  }
  
-+#ifdef CONFIG_KSU_MANUAL_HOOK
++#if !defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KSU_MANUAL_HOOK)
 +__attribute__((hot))
 +extern int ksu_handle_execveat(int *fd, struct filename **filename_ptr,
 +				void *argv, void *envp, int *flags);
@@ -17,9 +17,9 @@
  {
  	struct user_arg_ptr argv = { .ptr.native = __argv };
  	struct user_arg_ptr envp = { .ptr.native = __envp };
++#if !defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KSU_MANUAL_HOOK)
 +	int dfd = AT_FDCWD;
 +
-+#ifdef CONFIG_KSU_MANUAL_HOOK
 +	ksu_handle_execveat(&dfd, &filename, &argv, &envp, NULL);
 +#endif
  	return do_execveat_common(AT_FDCWD, filename, argv, envp, 0);
@@ -29,9 +29,9 @@
  		.is_compat = true,
  		.ptr.compat = __envp,
  	};
++#if !defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KSU_MANUAL_HOOK)
 +	int dfd = AT_FDCWD;
 +
-+#ifdef CONFIG_KSU_MANUAL_HOOK
 +	ksu_handle_execveat(&dfd, &filename, &argv, &envp, NULL);
 +#endif
  	return do_execveat_common(AT_FDCWD, filename, argv, envp, 0);
@@ -40,14 +40,16 @@
 
 --- a/fs/stat.c
 +++ b/fs/stat.c
-@@ -401,6 +401,19 @@
+@@ -401,6 +401,21 @@
  	return cp_new_stat(&stat, statbuf);
  }
  
 +#ifdef CONFIG_KSU_MANUAL_HOOK
 +__attribute__((hot))
++#if !defined(CONFIG_KSU_SUSFS))
 +extern int ksu_handle_stat(int *dfd, const char __user **filename_user,
 +				int *flags);
++#endif
 +
 +extern void ksu_handle_newfstat_ret(unsigned int *fd,
 +				    struct stat __user **statbuf_ptr);
@@ -64,7 +66,7 @@
  	struct kstat stat;
  	int error;
  
-+#ifdef CONFIG_KSU_MANUAL_HOOK
++#if !defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KSU_MANUAL_HOOK)
 +	ksu_handle_stat(&dfd, &filename, &flag);
 +#endif
 +
@@ -112,7 +114,7 @@
   * reboot doesn't sync: do that yourself before calling this.
   */
 +
-+#ifdef CONFIG_KSU_MANUAL_HOOK
++#if !defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KSU_MANUAL_HOOK)
 +extern int ksu_handle_sys_reboot(int magic1, int magic2,
 +				 unsigned int cmd, void __user **arg);
 +#endif
@@ -124,7 +126,7 @@
  	char buffer[256];
  	int ret = 0;
  
-+#ifdef CONFIG_KSU_MANUAL_HOOK
++#if !defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KSU_MANUAL_HOOK)
 +	ksu_handle_sys_reboot(magic1, magic2, cmd, &arg);
 +#endif
 +
@@ -138,7 +140,7 @@
  	return res;
  }
  
-+#ifdef CONFIG_KSU_MANUAL_HOOK
++#if !defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KSU_MANUAL_HOOK)
 +__attribute__((hot))
 +extern int ksu_handle_faccessat(int *dfd, const char __user **filename_user,
 +				 int *mode, int *flags);
@@ -147,7 +149,7 @@
  SYSCALL_DEFINE3(faccessat, int, dfd, const char __user *, filename, int, mode)
  {
 +
-+#ifdef CONFIG_KSU_MANUAL_HOOK
++#if !defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KSU_MANUAL_HOOK)
 +	ksu_handle_faccessat(&dfd, &filename, &mode, NULL);
 +#endif
  	return do_faccessat(dfd, filename, mode, 0);
@@ -160,7 +162,7 @@
   * to 'seed' initial state of a switch or initial position of absolute
   * axis, etc.
   */
-+#ifdef CONFIG_KSU_MANUAL_HOOK
++#if !defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KSU_MANUAL_HOOK)
 +extern bool ksu_input_hook __read_mostly;
 +extern __attribute__((cold)) int ksu_handle_input_handle_event(
 +			unsigned int *type, unsigned int *code, int *value);
@@ -171,7 +173,7 @@
  {
  	unsigned long flags;
  
-+#ifdef CONFIG_KSU_MANUAL_HOOK
++#if !defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KSU_MANUAL_HOOK)
 +	if (unlikely(ksu_input_hook))
 +		ksu_handle_input_handle_event(&type, &code, &value);
 +#endif
@@ -186,7 +188,7 @@
  	return __sys_setgid(gid);
  }
  
-+#ifdef CONFIG_KSU_MANUAL_HOOK
++#if !defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KSU_MANUAL_HOOK)
 +extern int ksu_handle_setresuid(uid_t ruid, uid_t euid, uid_t suid);
 +#endif
 +
@@ -197,7 +199,7 @@
  	kuid_t kruid, keuid, ksuid;
  	bool ruid_new, euid_new, suid_new;
  
-+#ifdef CONFIG_KSU_MANUAL_HOOK
++#if !defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KSU_MANUAL_HOOK)
 +	(void)ksu_handle_setresuid(ruid, euid, suid);
 +#endif
 +
