@@ -9,8 +9,7 @@ on:
         default: hid-freeze-test.zip
   push:
     branches:
-      - main
-      - master
+      - A-15_Upstream_Merged
   pull_request:
 
 permissions:
