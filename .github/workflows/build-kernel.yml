@@ -1,0 +1,106 @@
+name: Build kernel
+
+on:
+  workflow_dispatch:
+    inputs:
+      zip_name:
+        description: Final kernel zip name
+        required: false
+        default: hid-freeze-test.zip
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-kernel-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build kernel zip
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+
+    env:
+      FINAL_KERNEL_ZIP: ${{ inputs.zip_name || 'hid-freeze-test.zip' }}
+      CI: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            bc \
+            bison \
+            build-essential \
+            cpio \
+            curl \
+            dwarves \
+            flex \
+            gcc-aarch64-linux-gnu \
+            gcc-arm-linux-gnueabi \
+            gcc-arm-linux-gnueabihf \
+            git \
+            kmod \
+            libelf-dev \
+            libncurses-dev \
+            libssl-dev \
+            lld \
+            llvm \
+            openssl \
+            patch \
+            perl \
+            python3 \
+            unzip \
+            wget \
+            xz-utils \
+            zip \
+            zstd
+
+      - name: Add swap
+        run: |
+          sudo fallocate -l 16G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
+
+      - name: Cache Android clang
+        uses: actions/cache@v4
+        with:
+          path: ~/Git/Clang/clang-r547379
+          key: android-clang-r547379-linux-x86
+
+      - name: Build
+        run: |
+          chmod +x ./build.sh
+          ./build.sh
+
+      - name: List outputs
+        if: always()
+        run: |
+          find AnyKernel3 -maxdepth 1 -type f -name '*.zip' -print -exec sha1sum {} \; || true
+          ls -lh out/arch/arm64/boot/Image* 2>/dev/null || true
+
+      - name: Upload kernel zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-zip
+          path: AnyKernel3/*.zip
+          if-no-files-found: error
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
+          if-no-files-found: ignore

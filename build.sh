@@ -275,7 +275,9 @@ clone_clang() {
     log_section "Cloning Clang Function Start"
     if ! [ -d "$CLANG_DIR" ]; then
         echo -e "${yellow}⚠️  Clang directory not found:${nocol} $CLANG_DIR"
-        read -p "Press ENTER to clone to this path, or Ctrl+C to abort and edit the script to configure correct cloning directory: "
+        if [[ "${CI:-0}" != "true" ]]; then
+            read -p "Press ENTER to clone to this path, or Ctrl+C to abort and edit the script to configure correct cloning directory: "
+        fi
         echo -e "${red}Cloning clang at $CLANG_DIR ...${nocol}"
         mkdir -p "$CLANG_DIR"
 # ----------------------------------------------------
@@ -357,9 +359,11 @@ log_section() {
 }
 
 start() {
-    FINAL_KERNEL_ZIP=""
+    FINAL_KERNEL_ZIP="${FINAL_KERNEL_ZIP:-}"
     while true; do
-        read -rp "Enter final kernel zip name (format: <kernel_name>.zip): " FINAL_KERNEL_ZIP
+        if [[ -z "$FINAL_KERNEL_ZIP" ]]; then
+            read -rp "Enter final kernel zip name (format: <kernel_name>.zip): " FINAL_KERNEL_ZIP
+        fi
 
         # Strip all whitespace and stray CR
         FINAL_KERNEL_ZIP="${FINAL_KERNEL_ZIP//[[:space:]]/}"
@@ -951,6 +955,25 @@ Enable_KernelSU() {
     fi
 }
 
+Apply_ReSukiSU_Selinux_Hide_Fix() {
+    if [[ "$ENABLE_RESUKISU" != "1" ]]; then
+        return 0
+    fi
+
+    log_section "Applying ReSukiSU SELinux hide fix"
+    cd "$KERNELDIR"
+    if [[ ! -f ReSukiSU_selinux_hide_fix.diff ]]; then
+        echo -e "${red}ReSukiSU SELinux hide fix patch not found in $KERNELDIR ! Aborting.${nocol}"
+        exit 1
+    fi
+    if patch -p1 --fuzz=3 < ReSukiSU_selinux_hide_fix.diff; then
+        echo -e "${green}ReSukiSU SELinux hide fix applied successfully.${nocol}"
+    else
+        echo -e "${red}ERROR: ReSukiSU SELinux hide fix did not apply cleanly. Aborting.${nocol}"
+        exit 1
+    fi
+}
+
 Enable_SUKISU-ultra() {
     cd $KERNELDIR
     if [[ "$ENABLE_SUKISU" == "1" ]]; then
@@ -993,6 +1016,7 @@ Enable_SUKISU-ultra() {
                 read -p "Breakpoint after Cloning SUKISU Detected! Press Enter to continue..."
             fi
         fi
+        Apply_ReSukiSU_Selinux_Hide_Fix
         if [[ "$SUKI_MANUAL_HOOKS" == "1" ]]; then
             log_section "Started Applying SUKISU Manual Hook Patches "
             if ! cp ReSukiSU_Manual-Hooks.diff ReSukiSU_Manual-Hooks.patch; then

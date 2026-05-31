@@ -1,0 +1,66 @@
+--- a/KernelSU/kernel/feature/selinux_hide.c
++++ b/KernelSU/kernel/feature/selinux_hide.c
+@@ -6,11 +6,13 @@
+ #include <linux/printk.h>
+ #include <linux/string.h>
+ #include <linux/fs.h>
++#include <linux/mm.h>
+ #include <asm-generic/errno-base.h>
+ #include <net/genetlink.h>
+ #include <linux/moduleparam.h>
+ #include <linux/mutex.h>
+ #include <linux/version.h>
++#include <linux/jump_label.h>
+ 
+ // security/selinux/include/security.h
+ #include <security.h>
+@@ -543,8 +545,32 @@ static void ksu_selinux_hide_disable()
+ }
+ 
+ static DEFINE_MUTEX(selinux_hide_mutex);
+-static bool ksu_selinux_hide_enabled __read_mostly = false;
++bool ksu_selinux_hide_enabled __read_mostly = false;
+ bool ksu_selinux_hide_running __read_mostly = false;
++struct page *fake_status;
++DEFINE_STATIC_KEY_FALSE(fake_status_initialize_key);
++
++void initialize_fake_status(void)
++{
++    struct selinux_kernel_status *status;
++
++    mutex_lock(&selinux_state.status_lock);
++    if (fake_status) {
++        mutex_unlock(&selinux_state.status_lock);
++        return;
++    }
++
++    fake_status = alloc_page(GFP_KERNEL | __GFP_ZERO);
++    if (fake_status) {
++        status = page_address(fake_status);
++        status->version = SELINUX_KERNEL_STATUS_VERSION;
++        status->sequence = 0;
++        status->enforcing = 1;
++        status->policyload = 0;
++        status->deny_unknown = 1;
++    }
++    mutex_unlock(&selinux_state.status_lock);
++}
+ 
+ static int selinux_hide_feature_get(u64 *value)
+ {
+@@ -585,6 +611,7 @@ static const struct ksu_feature_handler selinux_hide_handler = {
+ 
+ void __init ksu_selinux_hide_init()
+ {
++    static_branch_enable(&fake_status_initialize_key);
+     if (ksu_register_feature_handler(&selinux_hide_handler)) {
+         pr_err("Failed to register selinux_hide feature handler\n");
+     }
+@@ -597,6 +624,7 @@ void __exit ksu_selinux_hide_exit()
+         ksu_selinux_hide_disable();
+         ksu_selinux_hide_running = false;
+     }
++    static_branch_disable(&fake_status_initialize_key);
+     mutex_unlock(&selinux_hide_mutex);
+     ksu_unregister_feature_handler(KSU_FEATURE_SELINUX_HIDE);
+ }

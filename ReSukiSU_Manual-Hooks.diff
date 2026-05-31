@@ -156,32 +156,6 @@
  }
  
 
---- a/drivers/input/input.c
-+++ b/drivers/input/input.c
-@@ -446,11 +446,22 @@
-  * to 'seed' initial state of a switch or initial position of absolute
-  * axis, etc.
-  */
-+#if !defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KSU_MANUAL_HOOK)
-+extern bool ksu_input_hook __read_mostly;
-+extern __attribute__((cold)) int ksu_handle_input_handle_event(
-+			unsigned int *type, unsigned int *code, int *value);
-+#endif
-+
- void input_event(struct input_dev *dev,
- 		 unsigned int type, unsigned int code, int value)
- {
- 	unsigned long flags;
- 
-+#if !defined(CONFIG_KSU_SUSFS) && defined(CONFIG_KSU_MANUAL_HOOK)
-+	if (unlikely(ksu_input_hook))
-+		ksu_handle_input_handle_event(&type, &code, &value);
-+#endif
-+
- 	if (is_event_supported(type, dev->evbit, EV_MAX)) {
- 
- 		spin_lock_irqsave(&dev->event_lock, flags);
-
 --- a/kernel/sys.c
 +++ b/kernel/sys.c
 @@ -468,6 +468,10 @@
@@ -206,27 +180,3 @@
  	kruid = make_kuid(ns, ruid);
  	keuid = make_kuid(ns, euid);
  	ksuid = make_kuid(ns, suid);
-
---- a/fs/read_write.c
-+++ b/fs/read_write.c
-@@ -636,8 +636,19 @@
- 	return ret;
- }
- 
-+#ifdef CONFIG_KSU_MANUAL_HOOK
-+extern bool ksu_init_rc_hook __read_mostly;
-+extern __attribute__((cold)) int ksu_handle_sys_read(unsigned int fd,
-+				char __user **buf_ptr, size_t *count_ptr);
-+#endif
-+
- SYSCALL_DEFINE3(read, unsigned int, fd, char __user *, buf, size_t, count)
- {
-+
-+#ifdef CONFIG_KSU_MANUAL_HOOK
-+	if (unlikely(ksu_init_rc_hook))
-+		ksu_handle_sys_read(fd, &buf, &count);
-+#endif
- 	return ksys_read(fd, buf, count);
- }
- 
-

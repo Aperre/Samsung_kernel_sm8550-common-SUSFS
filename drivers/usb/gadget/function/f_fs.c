@@ -364,7 +364,7 @@ static ssize_t ffs_ep0_write(struct file *file, const char __user *buf,
 
 		/* Handle data */
 		if (ffs->state == FFS_READ_DESCRIPTORS) {
-			pr_info("read descriptors\n");
+			pr_info_ratelimited("read descriptors\n");
 			ret = __ffs_data_got_descs(ffs, data, len);
 			if (ret < 0)
 				break;
@@ -372,7 +372,7 @@ static ssize_t ffs_ep0_write(struct file *file, const char __user *buf,
 			ffs->state = FFS_READ_STRINGS;
 			ret = len;
 		} else {
-			pr_info("read strings\n");
+			pr_info_ratelimited("read strings\n");
 			ret = __ffs_data_got_strings(ffs, data, len);
 			if (ret < 0)
 				break;

@@ -442,8 +442,7 @@ static ssize_t f_hidg_write(struct file *file, const char __user *buffer,
 		return -ESHUTDOWN;
 	}
 
-#define WRITE_COND (!hidg->write_pending)
-try_again:
+#define WRITE_COND (!hidg->write_pending || !hidg->req)
 	/* write queue */
 	while (!WRITE_COND) {
 		spin_unlock_irqrestore(&hidg->write_spinlock, flags);
@@ -455,6 +454,11 @@ try_again:
 			return -ERESTARTSYS;
 
 		spin_lock_irqsave(&hidg->write_spinlock, flags);
+	}
+
+	if (!hidg->req) {
+		spin_unlock_irqrestore(&hidg->write_spinlock, flags);
+		return -ESHUTDOWN;
 	}
 
 	hidg->write_pending = 1;
@@ -482,11 +486,10 @@ try_again:
 	/* when our function has been disabled by host */
 	if (!hidg->req) {
 		free_ep_req(hidg->in_ep, req);
-		/*
-		 * TODO
-		 * Should we fail with error here?
-		 */
-		goto try_again;
+		hidg->write_pending = 0;
+		spin_unlock_irqrestore(&hidg->write_spinlock, flags);
+		wake_up(&hidg->write_queue);
+		return -ESHUTDOWN;
 	}
 
 	req->status   = 0;
@@ -797,6 +800,8 @@ static void hidg_disable(struct usb_function *f)
 
 	hidg->req = NULL;
 	spin_unlock_irqrestore(&hidg->write_spinlock, flags);
+
+	wake_up(&hidg->write_queue);
 }
 
 static int hidg_set_alt(struct usb_function *f, unsigned intf, unsigned alt)
