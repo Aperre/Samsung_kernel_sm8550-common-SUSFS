@@ -1,4 +1,4 @@
-name: Build kernel
+name: Build kernel defaults
 
 on:
   workflow_dispatch:
