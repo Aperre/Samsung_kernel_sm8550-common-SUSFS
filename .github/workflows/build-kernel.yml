@@ -66,7 +66,7 @@ jobs:
 
       - name: Add swap
         run: |
-          sudo fallocate -l 16G /swapfile
+          sudo fallocate -l 16G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1G count=16 status=progress
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
