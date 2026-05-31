@@ -64,13 +64,13 @@ jobs:
             zip \
             zstd
 
-      - name: Add swap
-        run: |
-          sudo fallocate -l 16G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1G count=16 status=progress
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
-          free -h
+#      - name: Add swap
+#        run: |
+#          sudo fallocate -l 16G /swapfile || sudo dd if=/dev/zero of=/swapfile bs=1G count=16 status=progress
+#          sudo chmod 600 /swapfile
+#          sudo mkswap /swapfile
+#          sudo swapon /swapfile
+#          free -h
 
       - name: Cache Android clang
         uses: actions/cache@v4
