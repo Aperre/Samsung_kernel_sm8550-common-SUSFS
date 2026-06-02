@@ -4199,7 +4199,6 @@ retry:
 			/* lookup block mapping info after block migration */
 			goto retry;
 		}
-next:
 		if (cur_lblock + nr_pblocks >= sis->max)
 			nr_pblocks = sis->max - cur_lblock;
 
