@@ -24,7 +24,7 @@ echo  # Blank line
 # Uncomment Next 4 lines to install all necessary dependencies for kernel Compiling.
 
 #sudo apt-get update && sudo apt-get install -y \
-#  build-essential libncurses-dev bison flex libssl-dev libelf-dev bc \
+#  build-essential ccache libncurses-dev bison flex libssl-dev libelf-dev bc \
 #  dwarves fakeroot git clang llvm lld lldb \
 #  gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf gcc-arm-linux-gnueabi patch
 
@@ -58,9 +58,10 @@ CLANG_DIR="$TOOLCHAIN_DIR/$CLANG_VERSION"
 CLANG_BINARY="$CLANG_DIR/bin/clang"
 
 # An array that stores all make command, edit it as required. These options will be used throughout the script
+KERNEL_CC=clang
 MAKE_FLAGS=( \
   O=out \
-  CC=clang \
+  CC="$KERNEL_CC" \
   LD=ld.lld \
   LLVM=1 \
   LLVM_IAS=1 \
@@ -244,6 +245,32 @@ patch() {
 }
 export -f patch
 
+setup_ccache() {
+    if [[ "${USE_CCACHE:-1}" != "1" ]]; then
+        echo -e "${yellow}ccache disabled via USE_CCACHE=${USE_CCACHE}.${nocol}"
+        return
+    fi
+
+    if ! command -v ccache >/dev/null 2>&1; then
+        echo -e "${yellow}ccache not found; continuing without compiler cache.${nocol}"
+        return
+    fi
+
+    KERNEL_CC="ccache clang"
+    MAKE_FLAGS=( "${MAKE_FLAGS[@]/CC=clang/CC=$KERNEL_CC}" )
+    export CCACHE_DIR="${CCACHE_DIR:-$HOME/.cache/ccache}"
+    export CCACHE_BASEDIR="$KERNELDIR"
+    export CCACHE_COMPILERCHECK="${CCACHE_COMPILERCHECK:-content}"
+    export CCACHE_NOHASHDIR="${CCACHE_NOHASHDIR:-1}"
+    mkdir -p "$CCACHE_DIR"
+
+    if [[ -n "${CCACHE_MAXSIZE:-}" ]]; then
+        ccache --max-size="$CCACHE_MAXSIZE" >/dev/null || true
+    fi
+
+    echo -e "${green}ccache enabled at $CCACHE_DIR using CC='$KERNEL_CC'.${nocol}"
+}
+
 setup_env(){
     log_section "Setup Environment"
 
@@ -267,6 +294,9 @@ setup_env(){
     export LD=ld.lld
     export LLVM=1
     export LLVM_IAS=1
+
+    setup_ccache
+    export CC="$KERNEL_CC"
 
     echo -e "${green}Environment set up done!${nocol}"
 }
@@ -486,11 +516,13 @@ zip_kernel() {
         exit 1
     fi
 
-    # Generate today's date and time in the format YYYYMMDD_HHMMSS
-    TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-
-    # Append timestamp to the final kernel zip file name
-    FINAL_KERNEL_ZIP_WITH_TIMESTAMP="${FINAL_KERNEL_ZIP%.*}_${TIMESTAMP}.zip"
+    if [[ "${ADD_TIMESTAMP_TO_ZIP:-1}" == "1" ]]; then
+        # Generate today's date and time in the format YYYYMMDD_HHMMSS
+        TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+        FINAL_KERNEL_ZIP_WITH_TIMESTAMP="${FINAL_KERNEL_ZIP%.*}_${TIMESTAMP}.zip"
+    else
+        FINAL_KERNEL_ZIP_WITH_TIMESTAMP="$FINAL_KERNEL_ZIP"
+    fi
     export FINAL_KERNEL_ZIP_WITH_TIMESTAMP
 
     # Apply KPM and apatch patches on generated kernel binary before zipping if selected.

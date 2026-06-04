@@ -6,7 +6,7 @@ on:
       zip_name:
         description: Final kernel zip name
         required: false
-        default: hid-freeze-test.zip
+        default: ''
   push:
     branches:
       - A-15_Upstream_Merged
@@ -26,7 +26,10 @@ jobs:
     timeout-minutes: 360
 
     env:
-      FINAL_KERNEL_ZIP: ${{ inputs.zip_name || 'hid-freeze-test.zip' }}
+      FINAL_KERNEL_ZIP: ${{ inputs.zip_name || format('kernel-{0}.zip', github.sha) }}
+      CCACHE_DIR: /home/runner/.cache/ccache
+      CCACHE_MAXSIZE: 5G
+      ADD_TIMESTAMP_TO_ZIP: 0
       CI: true
 
     steps:
@@ -40,6 +43,7 @@ jobs:
             bc \
             bison \
             build-essential \
+            ccache \
             cpio \
             curl \
             dwarves \
@@ -64,6 +68,15 @@ jobs:
             zip \
             zstd
 
+      - name: Cache ccache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ccache
+          key: ccache-${{ runner.os }}-${{ hashFiles('build.sh', 'arch/arm64/configs/gki_defconfig') }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ runner.os }}-${{ hashFiles('build.sh', 'arch/arm64/configs/gki_defconfig') }}-
+            ccache-${{ runner.os }}-
+
       - name: Add swap
         run: |
           sudo fallocate -l 16G /tmp/swapbuild || sudo dd if=/dev/zero of=/tmp/swapbuild bs=1G count=16 status=progress
@@ -81,7 +94,9 @@ jobs:
       - name: Build
         run: |
           chmod +x ./build.sh
+          ccache --zero-stats || true
           ./build.sh
+          ccache --show-stats || true
 
       - name: List outputs
         if: always()
@@ -92,7 +107,7 @@ jobs:
       - name: Upload kernel zip
         uses: actions/upload-artifact@v7
         with:
-          name: kernel-zip
+          name: kernel-${{ github.sha }}
           path: AnyKernel3/*.zip
           if-no-files-found: error
 
