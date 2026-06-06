@@ -24,6 +24,7 @@
 #include <linux/init.h>
 #include <linux/file.h>
 #include <linux/fs.h>
+#include <linux/memfd.h>
 #include <linux/pgsize_migration.h>
 #include <linux/personality.h>
 #include <linux/security.h>

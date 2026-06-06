@@ -818,6 +818,7 @@ enum {
 	FI_ATOMIC_DIRTIED,	/* indicate atomic file is dirtied */
 	FI_ATOMIC_REPLACE,	/* indicate atomic replace */
 	FI_FUA_WRITE,		/* indicate files for FUA */
+	FI_OPENED_FILE,		/* indicate file has been opened */
 	FI_MAX,			/* max flag, never be used */
 };
 
@@ -1296,7 +1297,6 @@ enum cp_reason_type {
 	CP_FASTBOOT_MODE,
 	CP_SPEC_LOG_NUM,
 	CP_RECOVER_DIR,
-	NR_CP_REASON,
 	CP_XATTR_DIR,
 	NR_CP_REASON,
 };
