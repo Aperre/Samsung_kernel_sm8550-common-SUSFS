@@ -1425,10 +1425,6 @@ F2FS_FEATURE_RO_ATTR(linear_lookup);
 F2FS_FEATURE_RO_ATTR(sec_dnode_relocation);
 #endif
 
-#ifdef CONFIG_F2FS_SEC_SUPPORT_DNODE_RELOCATION
-F2FS_FEATURE_RO_ATTR(sec_dnode_relocation);
-#endif
-
 /* For ATGC */
 F2FS_RW_ATTR(ATGC_INFO, atgc_management, atgc_candidate_ratio, candidate_ratio);
 F2FS_RW_ATTR(ATGC_INFO, atgc_management, atgc_candidate_count, max_candidate_count);
