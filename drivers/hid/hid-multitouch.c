@@ -486,7 +486,6 @@ static void mt_get_feature(struct hid_device *hdev, struct hid_report *report)
 			dev_warn(&hdev->dev, "failed to report feature\n");
 	}
 
-free:
 	kfree(buf);
 }
 
