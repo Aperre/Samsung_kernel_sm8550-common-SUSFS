@@ -5910,12 +5910,15 @@ static void port_event(struct usb_hub *hub, int port1)
 	 * SS.Inactive state transitions the port to RxDetect automatically.
 	 * SS.Inactive link error state is common during device disconnect.
 	 */
-	if (hub_port_warm_reset_required(hub, port1, portstatus)) {
-		dev_dbg(&port_dev->dev, "do warm reset\n");
-#if IS_ENABLED(CONFIG_USB_HOST_CERTIFICATION)
-		send_usb_host_certi_uevent(hub->intfdev, USB_HOST_CERTI_WARM_RESET);
-#endif
-		if (!udev || !(portstatus & USB_PORT_STAT_CONNECTION)
+	while (hub_port_warm_reset_required(hub, port1, portstatus)) {
+		if ((i++ < DETECT_DISCONNECT_TRIES) && udev) {
+			u16 unused;
+
+			msleep(20);
+			hub_port_status(hub, port1, &portstatus, &unused);
+			dev_dbg(&port_dev->dev, "Wait for inactive link disconnect detect\n");
+			continue;
+		} else if (!udev || !(portstatus & USB_PORT_STAT_CONNECTION)
 				|| udev->state == USB_STATE_NOTATTACHED) {
 			dev_dbg(&port_dev->dev, "do warm reset, port only\n");
 #if IS_ENABLED(CONFIG_USB_HOST_CERTIFICATION)
