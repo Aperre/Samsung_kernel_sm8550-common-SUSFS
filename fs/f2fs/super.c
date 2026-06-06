@@ -137,6 +137,7 @@ enum {
 	Opt_data_flush,
 	Opt_reserve_root,
 	Opt_flush_group,
+	Opt_reserve_node,
 	Opt_resgid,
 	Opt_resuid,
 	Opt_mode,
@@ -216,6 +217,7 @@ static match_table_t f2fs_tokens = {
 	{Opt_data_flush, "data_flush"},
 	{Opt_reserve_root, "reserve_root=%u"},
 	{Opt_flush_group, "flush_group=%u"},
+	{Opt_reserve_node, "reserve_node=%u"},
 	{Opt_resgid, "resgid=%u"},
 	{Opt_resuid, "resuid=%u"},
 	{Opt_mode, "mode=%s"},
@@ -424,7 +426,7 @@ void f2fs_get_fsck_stat(struct f2fs_sb_info *sbi)
 
 static inline void limit_reserve_root(struct f2fs_sb_info *sbi)
 {
-	block_t limit = min(sbi->user_block_count / 100,
+	block_t block_limit = min(sbi->user_block_count / 100,
 			sbi->user_block_count - sbi->reserved_blocks);
 	block_t node_limit = sbi->total_node_count >> 3;
 
@@ -5099,4 +5101,3 @@ MODULE_DESCRIPTION("Flash Friendly File System");
 MODULE_LICENSE("GPL");
 MODULE_IMPORT_NS(ANDROID_GKI_VFS_EXPORT_ONLY);
 MODULE_SOFTDEP("pre: crc32");
-
