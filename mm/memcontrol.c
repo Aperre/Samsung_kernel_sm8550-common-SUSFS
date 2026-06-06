@@ -97,6 +97,9 @@ bool cgroup_memory_noswap __ro_after_init;
 #define cgroup_memory_noswap		1
 #endif
 
+static struct kmem_cache *memcg_cachep;
+static struct kmem_cache *memcg_pn_cachep;
+
 int is_heimdall_enabled;
 
 #ifdef CONFIG_CGROUP_WRITEBACK
