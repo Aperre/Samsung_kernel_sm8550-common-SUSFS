@@ -41,8 +41,6 @@ struct cleancache_ops {
 };
 typedef int (*rbin_module_oem_func)(int, int *);
 
-typedef int (*rbin_module_oem_func)(int, int *);
-
 extern int cleancache_register_ops(const struct cleancache_ops *ops);
 extern void __cleancache_init_fs(struct super_block *);
 extern void __cleancache_init_shared_fs(struct super_block *);
