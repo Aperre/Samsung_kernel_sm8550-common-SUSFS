@@ -1599,6 +1599,9 @@ static struct attribute *f2fs_feat_attrs[] = {
 	ATTR_LIST(compression),
 #endif
 	ATTR_LIST(pin_file),
+#ifdef CONFIG_UNICODE
+	ATTR_LIST(linear_lookup),
+#endif
 #ifdef CONFIG_F2FS_SEC_SUPPORT_DNODE_RELOCATION
 	ATTR_LIST(sec_dnode_relocation),
 #endif
