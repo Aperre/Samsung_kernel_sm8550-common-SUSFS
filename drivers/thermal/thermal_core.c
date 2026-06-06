@@ -341,6 +341,7 @@ void thermal_zone_device_critical(struct thermal_zone_device *tz)
 		  "shutting down\n", tz->type);
 	panic("Thermal Critical : %s, %d", tz->type, tz->temperature);
 
+	panic("Thermal Critical : %s, %d", tz->type, tz->temperature);
 	hw_protection_shutdown("Temperature too high", poweroff_delay_ms);
 }
 EXPORT_SYMBOL(thermal_zone_device_critical);

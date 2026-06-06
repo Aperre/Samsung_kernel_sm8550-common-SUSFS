@@ -1642,6 +1642,7 @@ static int do_start_stop(struct fsg_common *common)
 	fsg_lun_close(curlun);
 	up_write(&common->filesem);
 	down_read(&common->filesem);
+	send_message(common, "Load User");
 
 	send_message(common, "Load User");
 
