@@ -779,46 +779,6 @@ APPLY_PATCHES() {
     fi
 }
 
-fix_susfs_patch_hunk() {
-  local p="./50_add_susfs_in_gki-android13-5.15.patch"
-  [[ -f "$p" ]] || return 0
-
-  python3 - <<'PY'
-from pathlib import Path
-
-p = Path("./50_add_susfs_in_gki-android13-5.15.patch")
-s = p.read_text()
-
-old = """@@ -3462,6 +3658,9 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
-\tcopy_flags = CL_COPY_UNBINDABLE | CL_EXPIRE;
-\tif (user_ns != ns->user_ns)
-\t\tcopy_flags |= CL_SHARED_TO_SLAVE;
-+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+\tcopy_flags |= CL_COPY_MNT_NS;
-+#endif
-\tnew = copy_tree(old, old->mnt.mnt_root, copy_flags);
-\tif (IS_ERR(new)) {
-\t\tnamespace_unlock();
-"""
-
-new = """@@ -3462,3 +3658,6 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
-\tcopy_flags = CL_COPY_UNBINDABLE | CL_EXPIRE;
-\tif (user_ns != ns->user_ns)
-\t\tcopy_flags |= CL_SHARED_TO_SLAVE;
-+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+\tcopy_flags |= CL_COPY_MNT_NS;
-+#endif
-"""
-
-if old in s:
-    p.write_text(s.replace(old, new, 1))
-    print("[build.sh] fixed SUSFS hunk in", p)
-else:
-    print("[build.sh] SUSFS hunk already fixed or not found; skipping")
-PY
-}
-
-
 # Apply the SUSFS patches into your kernel tree
 SUSFS_Patch() {
     cd $KERNELDIR
@@ -846,13 +806,17 @@ SUSFS_Patch() {
         echo -e "${yellow}Copying SUSFS patch file…${nocol}"
         cp susfs4ksu/kernel_patches/50_add_susfs_in_gki-android13-5.15.patch .
 
-        # 3.5) Apply the SUSFS fix patch, with conflict handling
-        echo -e "${yellow}Applying SUSFS Fix patch…${nocol}"
-        cp susfs_fix.diff susfs_fix.patch
-        if patch -p1 --fuzz=3 < susfs_fix.patch; then
-            echo -e "${green}SUSFS Fix patch applied successfully.${nocol}"
+        # 3.5) Adapt the upstream SUSFS namespace hunk for this kernel's CONFIG_KDP_NS layout.
+        echo -e "${yellow}Adapting SUSFS patch for CONFIG_KDP_NS…${nocol}"
+        if patch --dry-run -p1 < susfs_kdp_ns.patch; then
+            if patch -p1 < susfs_kdp_ns.patch; then
+                echo -e "${green}SUSFS KDP namespace patch applied successfully.${nocol}"
+            else
+                echo -e "${red}SUSFS KDP namespace patch failed. Exiting.${nocol}" >&2
+                exit 1
+            fi
         else
-            echo -e "${red}SUSFS Fix patch failed with conflicts. Exiting.${nocol}" >&2
+            echo -e "${red}SUSFS KDP namespace patch does not match the fetched upstream patch. Exiting.${nocol}" >&2
             exit 1
         fi
 
@@ -865,11 +829,11 @@ SUSFS_Patch() {
             # upstream SUSFS patch may reject only its include/declaration
             # hunk even though the other namespace hunks apply successfully.
             mapfile -t SUSFS_REJECTS < <(find . -type f -name '*.rej' -not -path './.git/*' -print)
-            if [[ "${#SUSFS_REJECTS[@]}" -eq 1 \
-                  && "${SUSFS_REJECTS[0]}" == "./fs/namespace.c.rej" \
-                  && -f fs/namespace.c.rej \
-                  && grep -q 'static DEFINE_IDA(susfs_mnt_id_ida);' fs/namespace.c.rej \
-                  && grep -q 'CONFIG_KSU_SUSFS_SUS_MOUNT' fs/namespace.c.rej ]]; then
+            if (( ${#SUSFS_REJECTS[@]} == 1 )) \
+                && [[ "${SUSFS_REJECTS[0]}" == "./fs/namespace.c.rej" \
+                      && -f fs/namespace.c.rej ]] \
+                && grep -q 'static DEFINE_IDA(susfs_mnt_id_ida);' fs/namespace.c.rej \
+                && grep -q 'CONFIG_KSU_SUSFS_SUS_MOUNT' fs/namespace.c.rej; then
                 echo -e "${yellow}Applying the known SUSFS namespace fixup for CONFIG_KDP_NS...${nocol}"
                 python3 - <<'PY'
 from pathlib import Path
