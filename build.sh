@@ -859,18 +859,18 @@ SUSFS_Patch() {
         # 4) Apply the patch, with conflict handling
         log_section "Started Applying SUSFS Patches "
         if patch -p1 --fuzz=3 < 50_add_susfs_in_gki-android13-5.15.patch; then
-            echo -e "\${green}SUSFS Patch applied successfully.\${nocol}"
+            echo -e "${green}SUSFS Patch applied successfully.${nocol}"
         else
             # This kernel has a CONFIG_KDP_NS block in namespace.c. The
             # upstream SUSFS patch may reject only its include/declaration
             # hunk even though the other namespace hunks apply successfully.
             mapfile -t SUSFS_REJECTS < <(find . -type f -name '*.rej' -not -path './.git/*' -print)
-            if [[ "\${#SUSFS_REJECTS[@]}" -eq 1 \
-                  && "\${SUSFS_REJECTS[0]}" == "./fs/namespace.c.rej" \
+            if [[ "${#SUSFS_REJECTS[@]}" -eq 1 \
+                  && "${SUSFS_REJECTS[0]}" == "./fs/namespace.c.rej" \
                   && -f fs/namespace.c.rej \
                   && grep -q 'static DEFINE_IDA(susfs_mnt_id_ida);' fs/namespace.c.rej \
                   && grep -q 'CONFIG_KSU_SUSFS_SUS_MOUNT' fs/namespace.c.rej ]]; then
-                echo -e "\${yellow}Applying the known SUSFS namespace fixup for CONFIG_KDP_NS...\${nocol}"
+                echo -e "${yellow}Applying the known SUSFS namespace fixup for CONFIG_KDP_NS...${nocol}"
                 python3 - <<'PY'
 from pathlib import Path
 
@@ -912,10 +912,10 @@ static DEFINE_IDA(susfs_mnt_group_ida);
 path.write_text(source)
 PY
                 rm -f fs/namespace.c.rej
-                echo -e "\${green}SUSFS namespace fixup applied.\${nocol}"
+                echo -e "${green}SUSFS namespace fixup applied.${nocol}"
             else
-                echo -e "\${red}SUSFS patch failed with unexpected conflicts. Reject files:\${nocol}" >&2
-                printf '%s\n' "\${SUSFS_REJECTS[@]}" >&2
+                echo -e "${red}SUSFS patch failed with unexpected conflicts. Reject files:${nocol}" >&2
+                printf '%s\n' "${SUSFS_REJECTS[@]}" >&2
                 exit 1
             fi
         fi
