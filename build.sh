@@ -825,60 +825,75 @@ SUSFS_Patch() {
         if patch -p1 --fuzz=3 < 50_add_susfs_in_gki-android13-5.15.patch; then
             echo -e "${green}SUSFS Patch applied successfully.${nocol}"
         else
-            # This kernel has a CONFIG_KDP_NS block in namespace.c. The
-            # upstream SUSFS patch may reject only its include/declaration
-            # hunk even though the other namespace hunks apply successfully.
+            # The known first SUSFS namespace hunk may reject because this
+            # kernel has an extra CONFIG_KDP_NS include block. Only repair this
+            # specific hunk, and source the exact declarations from the reject.
             mapfile -t SUSFS_REJECTS < <(find . -type f -name '*.rej' -not -path './.git/*' -print)
             if (( ${#SUSFS_REJECTS[@]} == 1 )) \
                 && [[ "${SUSFS_REJECTS[0]}" == "./fs/namespace.c.rej" \
                       && -f fs/namespace.c.rej ]] \
-                && grep -q 'static DEFINE_IDA(susfs_mnt_id_ida);' fs/namespace.c.rej \
-                && grep -q 'CONFIG_KSU_SUSFS_SUS_MOUNT' fs/namespace.c.rej; then
-                echo -e "${yellow}Applying the known SUSFS namespace fixup for CONFIG_KDP_NS...${nocol}"
+                && grep -q 'susfs_def.h' fs/namespace.c.rej \
+                && grep -q 'CL_COPY_MNT_NS' fs/namespace.c.rej; then
+                echo -e "${yellow}Repairing the known SUSFS namespace include/declaration hunk for CONFIG_KDP_NS...${nocol}"
                 python3 - <<'PY'
 from pathlib import Path
 
-path = Path("fs/namespace.c")
-source = path.read_text()
+reject_path = Path("fs/namespace.c.rej")
+source_path = Path("fs/namespace.c")
+reject_lines = reject_path.read_text().splitlines()
+source = source_path.read_text()
+
+include_blocks = []
+declaration_blocks = []
+
+# Preserve upstream's exact declarations instead of hardcoding a possibly
+# stale symbol name or type in the kernel-side fixup.
+i = 0
+while i < len(reject_lines):
+    line = reject_lines[i]
+    if line.startswith("+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT"):
+        block = [line[1:]]
+        j = i + 1
+        while j < len(reject_lines) and reject_lines[j].startswith("+"):
+            block.append(reject_lines[j][1:])
+            if reject_lines[j].startswith("+#endif"):
+                break
+            j += 1
+        block_text = "\n".join(block) + "\n"
+        if "#include <linux/susfs_def.h>" in block_text:
+            include_blocks.append(block_text)
+        elif "CL_COPY_MNT_NS" in block_text:
+            declaration_blocks.append(block_text)
+        i = j + 1
+        continue
+    i += 1
+
+if len(include_blocks) != 1 or len(declaration_blocks) != 1:
+    raise SystemExit(
+        "SUSFS repair: expected exactly one susfs_def.h include block "
+        "and one CL_COPY_MNT_NS declaration block in fs/namespace.c.rej."
+    )
 
 kdp_anchor = '#ifdef CONFIG_KDP_NS\n#include <linux/kdp.h>\n#endif\n'
 if source.count(kdp_anchor) != 1:
-    raise SystemExit("SUSFS fixup: expected CONFIG_KDP_NS include block was not found exactly once.")
+    raise SystemExit("SUSFS repair: expected CONFIG_KDP_NS include block was not found exactly once.")
 
 if "#include <linux/susfs_def.h>" not in source:
-    source = source.replace(
-        kdp_anchor,
-        kdp_anchor
-        + '#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\n'
-        + '#include <linux/susfs_def.h>\n'
-        + '#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\n',
-        1,
-    )
+    source = source.replace(kdp_anchor, kdp_anchor + include_blocks[0], 1)
 
 internal_anchor = '#include "internal.h"\n'
 if source.count(internal_anchor) != 1:
-    raise SystemExit("SUSFS fixup: expected internal.h include was not found exactly once.")
+    raise SystemExit('SUSFS repair: expected internal.h include was not found exactly once.')
 
-if "static DEFINE_IDA(susfs_mnt_id_ida);" not in source:
-    declarations = """#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-extern bool susfs_is_current_ksu_domain(void);
-extern bool susfs_is_sdcard_android_data_decrypted __read_mostly;
+if "CL_COPY_MNT_NS" not in source:
+    source = source.replace(internal_anchor, internal_anchor + declaration_blocks[0], 1)
 
-#define CL_COPY_MNT_NS BIT(25) /* used by copy_mnt_ns() */
-
-static DEFINE_IDA(susfs_mnt_id_ida);
-static DEFINE_IDA(susfs_mnt_group_ida);
-
-#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-"""
-    source = source.replace(internal_anchor, internal_anchor + declarations, 1)
-
-path.write_text(source)
+source_path.write_text(source)
 PY
                 rm -f fs/namespace.c.rej
-                echo -e "${green}SUSFS namespace fixup applied.${nocol}"
+                echo -e "${green}SUSFS namespace hunk repaired from its rejected additions.${nocol}"
             else
-                echo -e "${red}SUSFS patch failed with unexpected conflicts. Reject files:${nocol}" >&2
+                echo -e "${red}SUSFS patch failed with unexpected conflicts.${nocol}" >&2
                 printf '%s\n' "${SUSFS_REJECTS[@]}" >&2
                 exit 1
             fi
