@@ -859,26 +859,65 @@ SUSFS_Patch() {
         # 4) Apply the patch, with conflict handling
         log_section "Started Applying SUSFS Patches "
         if patch -p1 --fuzz=3 < 50_add_susfs_in_gki-android13-5.15.patch; then
-            echo -e "${green}SUSFS Patch applied successfully.${nocol}"
-            if [[ "$ENABLE_KSU" == "1" ]]; then
-                log_section "Started Applying SUSFS Patches to KernelSU"
-                cp susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch KernelSU/
-                cd KernelSU
-                if patch -p1 --fuzz=3 < 10_enable_susfs_for_ksu.patch; then
-                    echo -e "${green}KernelSU SUSFS Patch applied successfully.${nocol}"
-                    rm -f 10_enable_susfs_for_ksu.patch
-                    cd $KERNELDIR
-                fi
-            fi
-            if [[ "$ENABLE_BREAKPOINTS" == "1" ]]; then
-                read -p "Breakpoint after applying SUSFS patch Detected! Press Enter to continue..."
-            fi
-            echo -e "${yellow}Removing susfs4ksu directory and patch file...${nocol}"
-            rm -rf susfs4ksu 50_add_susfs_in_gki-android13-5.15.patch
-            echo -e "${green}SUSFS patch applied and cleaned up.${nocol}"
+            echo -e "\${green}SUSFS Patch applied successfully.\${nocol}"
         else
-            echo -e "${red}Patch failed with conflicts. Exiting.${nocol}" >&2
-            exit 1
+            # This kernel has a CONFIG_KDP_NS block in namespace.c. The
+            # upstream SUSFS patch may reject only its include/declaration
+            # hunk even though the other namespace hunks apply successfully.
+            mapfile -t SUSFS_REJECTS < <(find . -type f -name '*.rej' -not -path './.git/*' -print)
+            if [[ "\${#SUSFS_REJECTS[@]}" -eq 1 \
+                  && "\${SUSFS_REJECTS[0]}" == "./fs/namespace.c.rej" \
+                  && -f fs/namespace.c.rej \
+                  && grep -q 'static DEFINE_IDA(susfs_mnt_id_ida);' fs/namespace.c.rej \
+                  && grep -q 'CONFIG_KSU_SUSFS_SUS_MOUNT' fs/namespace.c.rej ]]; then
+                echo -e "\${yellow}Applying the known SUSFS namespace fixup for CONFIG_KDP_NS...\${nocol}"
+                python3 - <<'PY'
+from pathlib import Path
+
+path = Path("fs/namespace.c")
+source = path.read_text()
+
+kdp_anchor = '#ifdef CONFIG_KDP_NS\n#include <linux/kdp.h>\n#endif\n'
+if source.count(kdp_anchor) != 1:
+    raise SystemExit("SUSFS fixup: expected CONFIG_KDP_NS include block was not found exactly once.")
+
+if "#include <linux/susfs_def.h>" not in source:
+    source = source.replace(
+        kdp_anchor,
+        kdp_anchor
+        + '#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\n'
+        + '#include <linux/susfs_def.h>\n'
+        + '#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\n',
+        1,
+    )
+
+internal_anchor = '#include "internal.h"\n'
+if source.count(internal_anchor) != 1:
+    raise SystemExit("SUSFS fixup: expected internal.h include was not found exactly once.")
+
+if "static DEFINE_IDA(susfs_mnt_id_ida);" not in source:
+    declarations = """#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+extern bool susfs_is_current_ksu_domain(void);
+extern bool susfs_is_sdcard_android_data_decrypted __read_mostly;
+
+#define CL_COPY_MNT_NS BIT(25) /* used by copy_mnt_ns() */
+
+static DEFINE_IDA(susfs_mnt_id_ida);
+static DEFINE_IDA(susfs_mnt_group_ida);
+
+#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
+"""
+    source = source.replace(internal_anchor, internal_anchor + declarations, 1)
+
+path.write_text(source)
+PY
+                rm -f fs/namespace.c.rej
+                echo -e "\${green}SUSFS namespace fixup applied.\${nocol}"
+            else
+                echo -e "\${red}SUSFS patch failed with unexpected conflicts. Reject files:\${nocol}" >&2
+                printf '%s\n' "\${SUSFS_REJECTS[@]}" >&2
+                exit 1
+            fi
         fi
     fi
 }
