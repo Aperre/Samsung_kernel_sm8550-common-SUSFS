@@ -5,5 +5,5 @@
 - 	if (IS_ERR(new)) {
 - 		namespace_unlock();
 + #ifdef CONFIG_KDP_NS
-+	new = copy_tree(old, ((struct kdp_mount *)old)->mnt->mnt_root, copy_flags);
++ 	new = copy_tree(old, ((struct kdp_mount *)old)->mnt->mnt_root, copy_flags);
 + #else
