@@ -96,6 +96,9 @@ jobs:
 
       - name: Build
         run: |
+          # Keep build.sh failures visible when piping output through tee.
+          set -o pipefail
+
           chmod +x ./build.sh
 
           ccache --zero-stats || true
@@ -106,16 +109,23 @@ jobs:
 
       - name: Verify kernel ZIP
         run: |
+          shopt -s nullglob
+          zips=(AnyKernel3/*.zip)
+
+          if (( ${#zips[@]} == 0 )); then
+            echo "::error::No AnyKernel3 ZIP was generated. Check the earlier build step for the real failure." >&2
+            if [[ ! -d AnyKernel3 ]]; then
+              echo "::error::AnyKernel3 was never created; zip_kernel did not complete." >&2
+            fi
+            exit 1
+          fi
+
           echo "Kernel ZIP(s):"
-          find AnyKernel3 \
-            -maxdepth 1 \
-            -type f \
-            -name '*.zip' \
-            -print
+          printf '  %s\n' "${zips[@]}"
 
           echo
           echo "SHA-256:"
-          sha256sum AnyKernel3/*.zip
+          sha256sum "${zips[@]}"
 
           echo
           echo "Kernel image:"
