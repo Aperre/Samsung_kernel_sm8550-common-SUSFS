@@ -885,7 +885,7 @@ internal_anchor = '#include "internal.h"\n'
 if source.count(internal_anchor) != 1:
     raise SystemExit('SUSFS repair: expected internal.h include was not found exactly once.')
 
-if "CL_COPY_MNT_NS" not in source:
+if "susfs_is_current_ksu_domain" not in source:
     source = source.replace(internal_anchor, internal_anchor + declaration_blocks[0], 1)
 
 source_path.write_text(source)
