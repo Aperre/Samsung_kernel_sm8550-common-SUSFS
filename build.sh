@@ -871,8 +871,6 @@ declaration_block = (
     "\n"
     "#define CL_COPY_MNT_NS BIT(25) /* used by copy_mnt_ns() */\n"
     "\n"
-    "static DEFINE_IDA(susfs_mnt_id_ida);\n"
-    "static DEFINE_IDA(susfs_mnt_group_ida);\n"
     "\n"
     "#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\n"
 )
