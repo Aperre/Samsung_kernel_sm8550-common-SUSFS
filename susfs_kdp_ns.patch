@@ -1,18 +1,9 @@
 --- a/50_add_susfs_in_gki-android13-5.15.patch
 +++ b/50_add_susfs_in_gki-android13-5.15.patch
-@@ -696,11 +696,11 @@
--@@ -3462,6 +3658,9 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
-+@@ -3462,5 +3658,9 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
-  	copy_flags = CL_COPY_UNBINDABLE | CL_EXPIRE;
-  	if (user_ns != ns->user_ns)
-  		copy_flags |= CL_SHARED_TO_SLAVE;
- +#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
- +	copy_flags |= CL_COPY_MNT_NS;
- +#endif
+@@ -700,3 +700,3 @@
 - 	new = copy_tree(old, old->mnt.mnt_root, copy_flags);
 - 	if (IS_ERR(new)) {
 - 		namespace_unlock();
 + #ifdef CONFIG_KDP_NS
 +	new = copy_tree(old, ((struct kdp_mount *)old)->mnt->mnt_root, copy_flags);
 + #else
- @@ -4669,3 +4868,42 @@ const struct proc_ns_operations mntns_operations = {
