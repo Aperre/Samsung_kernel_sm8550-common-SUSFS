@@ -182,10 +182,10 @@ jobs:
 
           cat SHA256SUMS
 
-      - name: Get ReSukiSU information
+      - name: Get BakaSU information
         id: sukisu
         run: |
-          echo "variant=ReSukiSU" >> "$GITHUB_OUTPUT"
+          echo "variant=BakaSU" >> "$GITHUB_OUTPUT"
 
           if [ -d KernelSU/.git ]; then
             echo "commit=$(git -C KernelSU rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -232,9 +232,9 @@ jobs:
 
           ### Root
 
-          - Framework: ReSukiSU
-          - ReSukiSU commit: \`${{ steps.sukisu.outputs.short_commit }}\`
-          - ReSukiSU full commit: \`${{ steps.sukisu.outputs.commit }}\`
+          - Framework: BakaSU
+          - BakaSU commit: \`${{ steps.sukisu.outputs.short_commit }}\`
+          - BakaSU full commit: \`${{ steps.sukisu.outputs.commit }}\`
 
           ### Toolchain
 
@@ -262,5 +262,5 @@ jobs:
           echo "## Kernel Release" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**Version:** ${{ steps.version.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "**ReSukiSU:** ${{ steps.sukisu.outputs.short_commit }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "**BakaSU:** ${{ steps.sukisu.outputs.short_commit }}" >> "$GITHUB_STEP_SUMMARY"
           echo "**Commit:** ${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"
