@@ -96,6 +96,9 @@ jobs:
 
       - name: Build
         run: |
+          # Keep build.sh failures visible when piping output through tee.
+          set -o pipefail
+
           chmod +x ./build.sh
 
           ccache --zero-stats || true
@@ -106,16 +109,23 @@ jobs:
 
       - name: Verify kernel ZIP
         run: |
+          shopt -s nullglob
+          zips=(AnyKernel3/*.zip)
+
+          if (( ${#zips[@]} == 0 )); then
+            echo "::error::No AnyKernel3 ZIP was generated. Check the earlier build step for the real failure." >&2
+            if [[ ! -d AnyKernel3 ]]; then
+              echo "::error::AnyKernel3 was never created; zip_kernel did not complete." >&2
+            fi
+            exit 1
+          fi
+
           echo "Kernel ZIP(s):"
-          find AnyKernel3 \
-            -maxdepth 1 \
-            -type f \
-            -name '*.zip' \
-            -print
+          printf '  %s\n' "${zips[@]}"
 
           echo
           echo "SHA-256:"
-          sha256sum AnyKernel3/*.zip
+          sha256sum "${zips[@]}"
 
           echo
           echo "Kernel image:"
@@ -172,10 +182,10 @@ jobs:
 
           cat SHA256SUMS
 
-      - name: Get ReSukiSU information
+      - name: Get BakaSU information
         id: sukisu
         run: |
-          echo "variant=ReSukiSU" >> "$GITHUB_OUTPUT"
+          echo "variant=BakaSU" >> "$GITHUB_OUTPUT"
 
           if [ -d KernelSU/.git ]; then
             echo "commit=$(git -C KernelSU rev-parse HEAD)" >> "$GITHUB_OUTPUT"
@@ -222,9 +232,9 @@ jobs:
 
           ### Root
 
-          - Framework: ReSukiSU
-          - ReSukiSU commit: \`${{ steps.sukisu.outputs.short_commit }}\`
-          - ReSukiSU full commit: \`${{ steps.sukisu.outputs.commit }}\`
+          - Framework: BakaSU
+          - BakaSU commit: \`${{ steps.sukisu.outputs.short_commit }}\`
+          - BakaSU full commit: \`${{ steps.sukisu.outputs.commit }}\`
 
           ### Toolchain
 
@@ -252,5 +262,5 @@ jobs:
           echo "## Kernel Release" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "**Version:** ${{ steps.version.outputs.version }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "**ReSukiSU:** ${{ steps.sukisu.outputs.short_commit }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "**BakaSU:** ${{ steps.sukisu.outputs.short_commit }}" >> "$GITHUB_STEP_SUMMARY"
           echo "**Commit:** ${GITHUB_SHA}" >> "$GITHUB_STEP_SUMMARY"

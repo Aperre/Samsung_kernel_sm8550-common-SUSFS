@@ -85,7 +85,7 @@ SUSFS_CHECKOUT_HASH=""   # Specific commit SHA after cloning (empty = latest)
 # ---------------------------------------------------------------------------- #
 #                   KernelSU-Next  |  SUKISU  |  KernelSU                      #
 #                (Enable **only one** of the following options)                #
-#             Either Enable KernelSU or KernelSU-Next or SukiSU-Ultra.         #
+#             Enable only one: KernelSU, KernelSU-Next, SukiSU-Ultra, or BakaSU.         #
 # ---------------------------------------------------------------------------- #
 
 ## KernelSU-Next Options
@@ -94,11 +94,11 @@ KSU_NEXT_STABLE=1        # Select stable branch? (1 = stable, 0 = dev)
 KSU_NEXT_MANUAL_HOOKS=1  # Hooks style (1 = manual, 0 = kprobes)
 KSUN_CHECKOUT_HASH=""    # Specific KernelSU-Next commit SHA
 
-## SUKISU-Ultra Options
-ENABLE_SUKISU=1          # Use SUKISU-Ultra? (1 = yes, 0 = no)
-ENABLE_SUKISU_ULTRA=0    # Toggle SUKISU source: SukiSU-Ultra (1 = yes, 0 = no)
-ENABLE_RESUKISU=1        # Toggle SUKISU source: ReSukiSU (1 = yes, 0 = no)
-SUKI_MANUAL_HOOKS=1      # Manual Hooks for SUKISU (SUSFS version only) (1 = manual, 0 = default)
+## SukiSU-Ultra / BakaSU Options
+ENABLE_SUKISU=1          # enable SukiSU-Ultra/BakaSU (1 = yes, 0 = no)
+ENABLE_SUKISU_ULTRA=0    # Select SukiSU-Ultra (1 = yes, 0 = no)
+ENABLE_BAKASU=1        # Select BakaSU (1 = yes, 0 = no)
+SUKI_MANUAL_HOOKS=1      # Manual hooks for selected SukiSU-Ultra/BakaSU variant (SUSFS version only) (1 = manual, 0 = default)
 SUKI_TRACEPOINTS_HOOK=0  # Use tracepoint hook for Sukisu-Ultra (for SUSFS and Normal ver) (1 = enable, 0 = disabled)
 SUKI_CHECKOUT_HASH=""    # Specific SUKISU commit SHA
 PATCH_KPM=1              # Patches the kernel binary after its done compiling.
@@ -159,9 +159,9 @@ if [[ "$ENABLE_SUKISU_ULTRA" != "1" && "$ENABLE_SUKISU_ULTRA" != "0" ]]; then
     ENABLE_SUKISU_ULTRA=0
 fi
 
-if [[ "$ENABLE_RESUKISU" != "1" && "$ENABLE_RESUKISU" != "0" ]]; then
-    echo -e "${yellow}Invalid ENABLE_RESUKISU variable value; defaulting to 1${nocol}" >&2
-    ENABLE_RESUKISU=1
+if [[ "$ENABLE_BAKASU" != "1" && "$ENABLE_BAKASU" != "0" ]]; then
+    echo -e "${yellow}Invalid ENABLE_BAKASU variable value; defaulting to 1${nocol}" >&2
+    ENABLE_BAKASU=1
 fi
 
 if [[ "$ENABLE_KSU" != "1" && "$ENABLE_KSU" != "0" ]]; then
@@ -176,26 +176,26 @@ fi
 
 # SUKISU source toggle validation (only one source can be selected)
 if [[ "$ENABLE_SUKISU" == "1" ]]; then
-    if [[ "$ENABLE_SUKISU_ULTRA" == "1" && "$ENABLE_RESUKISU" == "1" ]]; then
-        echo -e "${red}Error:${nocol} Only one SUKISU source can be enabled: ENABLE_SUKISU_ULTRA or ENABLE_RESUKISU." >&2
+    if [[ "$ENABLE_SUKISU_ULTRA" == "1" && "$ENABLE_BAKASU" == "1" ]]; then
+        echo -e "${red}Error:${nocol} Only one variant source can be enabled: ENABLE_SUKISU_ULTRA or ENABLE_BAKASU." >&2
         exit 1
     fi
 
-    if [[ "$ENABLE_SUKISU_ULTRA" == "0" && "$ENABLE_RESUKISU" == "0" ]]; then
-        echo -e "${blue}Note:${nocol} No SUKISU source selected; defaulting to ReSukiSU."
-        ENABLE_RESUKISU=1
+    if [[ "$ENABLE_SUKISU_ULTRA" == "0" && "$ENABLE_BAKASU" == "0" ]]; then
+        echo -e "${blue}Note:${nocol} No variant source selected; defaulting to BakaSU."
+        ENABLE_BAKASU=1
     fi
 else
     ENABLE_SUKISU_ULTRA=0
-    ENABLE_RESUKISU=0
+    ENABLE_BAKASU=0
 fi
 
 if [[ "$ENABLE_SUKISU_ULTRA" == "1" ]]; then
     SUKISU_VARIANT_NAME="SukiSU-Ultra"
     SUKISU_SETUP_URL="https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh"
 else
-    SUKISU_VARIANT_NAME="ReSukiSU"
-    SUKISU_SETUP_URL="https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh"
+    SUKISU_VARIANT_NAME="BakaSU"
+    SUKISU_SETUP_URL="https://raw.githubusercontent.com/Baka-SU/BakaSU/main/kernel/setup.sh"
 fi
 
 # KernelSU-Next removed SUSFS branches, so if using KernelSU-Next do not apply susfs patches
@@ -779,46 +779,6 @@ APPLY_PATCHES() {
     fi
 }
 
-fix_susfs_patch_hunk() {
-  local p="./50_add_susfs_in_gki-android13-5.15.patch"
-  [[ -f "$p" ]] || return 0
-
-  python3 - <<'PY'
-from pathlib import Path
-
-p = Path("./50_add_susfs_in_gki-android13-5.15.patch")
-s = p.read_text()
-
-old = """@@ -3462,6 +3658,9 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
-\tcopy_flags = CL_COPY_UNBINDABLE | CL_EXPIRE;
-\tif (user_ns != ns->user_ns)
-\t\tcopy_flags |= CL_SHARED_TO_SLAVE;
-+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+\tcopy_flags |= CL_COPY_MNT_NS;
-+#endif
-\tnew = copy_tree(old, old->mnt.mnt_root, copy_flags);
-\tif (IS_ERR(new)) {
-\t\tnamespace_unlock();
-"""
-
-new = """@@ -3462,3 +3658,6 @@ struct mnt_namespace *copy_mnt_ns(unsigned long flags, struct mnt_namespace *ns,
-\tcopy_flags = CL_COPY_UNBINDABLE | CL_EXPIRE;
-\tif (user_ns != ns->user_ns)
-\t\tcopy_flags |= CL_SHARED_TO_SLAVE;
-+#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT
-+\tcopy_flags |= CL_COPY_MNT_NS;
-+#endif
-"""
-
-if old in s:
-    p.write_text(s.replace(old, new, 1))
-    print("[build.sh] fixed SUSFS hunk in", p)
-else:
-    print("[build.sh] SUSFS hunk already fixed or not found; skipping")
-PY
-}
-
-
 # Apply the SUSFS patches into your kernel tree
 SUSFS_Patch() {
     cd $KERNELDIR
@@ -846,13 +806,17 @@ SUSFS_Patch() {
         echo -e "${yellow}Copying SUSFS patch file…${nocol}"
         cp susfs4ksu/kernel_patches/50_add_susfs_in_gki-android13-5.15.patch .
 
-        # 3.5) Apply the SUSFS fix patch, with conflict handling
-        echo -e "${yellow}Applying SUSFS Fix patch…${nocol}"
-        cp susfs_fix.diff susfs_fix.patch
-        if patch -p1 --fuzz=3 < susfs_fix.patch; then
-            echo -e "${green}SUSFS Fix patch applied successfully.${nocol}"
+        # 3.5) Adapt the upstream SUSFS namespace hunk for this kernel's CONFIG_KDP_NS layout.
+        echo -e "${yellow}Adapting SUSFS patch for CONFIG_KDP_NS…${nocol}"
+        if patch --dry-run -p1 < susfs_kdp_ns.patch; then
+            if patch -p1 < susfs_kdp_ns.patch; then
+                echo -e "${green}SUSFS KDP namespace patch applied successfully.${nocol}"
+            else
+                echo -e "${red}SUSFS KDP namespace patch failed. Exiting.${nocol}" >&2
+                exit 1
+            fi
         else
-            echo -e "${red}SUSFS Fix patch failed with conflicts. Exiting.${nocol}" >&2
+            echo -e "${red}SUSFS KDP namespace patch does not match the fetched upstream patch. Exiting.${nocol}" >&2
             exit 1
         fi
 
@@ -860,25 +824,68 @@ SUSFS_Patch() {
         log_section "Started Applying SUSFS Patches "
         if patch -p1 --fuzz=3 < 50_add_susfs_in_gki-android13-5.15.patch; then
             echo -e "${green}SUSFS Patch applied successfully.${nocol}"
-            if [[ "$ENABLE_KSU" == "1" ]]; then
-                log_section "Started Applying SUSFS Patches to KernelSU"
-                cp susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch KernelSU/
-                cd KernelSU
-                if patch -p1 --fuzz=3 < 10_enable_susfs_for_ksu.patch; then
-                    echo -e "${green}KernelSU SUSFS Patch applied successfully.${nocol}"
-                    rm -f 10_enable_susfs_for_ksu.patch
-                    cd $KERNELDIR
-                fi
-            fi
-            if [[ "$ENABLE_BREAKPOINTS" == "1" ]]; then
-                read -p "Breakpoint after applying SUSFS patch Detected! Press Enter to continue..."
-            fi
-            echo -e "${yellow}Removing susfs4ksu directory and patch file...${nocol}"
-            rm -rf susfs4ksu 50_add_susfs_in_gki-android13-5.15.patch
-            echo -e "${green}SUSFS patch applied and cleaned up.${nocol}"
         else
-            echo -e "${red}Patch failed with conflicts. Exiting.${nocol}" >&2
-            exit 1
+            # This specific hunk fails because the kernel has an extra CONFIG_KDP_NS
+            # include block. Use the markers in the reject file to identify it,
+            # then insert the exact SUSFS declarations expected by this patch version.
+            mapfile -t SUSFS_REJECTS < <(find . -type f -name '*.rej' -not -path './.git/*' -print)
+            if (( ${#SUSFS_REJECTS[@]} == 1 )) \
+                && [[ "${SUSFS_REJECTS[0]}" == "./fs/namespace.c.rej" \
+                      && -f fs/namespace.c.rej ]] \
+                && grep -q 'susfs_def.h' fs/namespace.c.rej \
+                && grep -q 'CL_COPY_MNT_NS' fs/namespace.c.rej; then
+                echo -e "${yellow}Repairing the known SUSFS namespace include/declaration hunk for CONFIG_KDP_NS...${nocol}"
+                python3 - <<'PY'
+from pathlib import Path
+
+reject_path = Path("fs/namespace.c.rej")
+source_path = Path("fs/namespace.c")
+reject = reject_path.read_text()
+source = source_path.read_text()
+
+# Guard this repair using both identifiers in the actual rejected upstream hunk.
+if "susfs_def.h" not in reject or "CL_COPY_MNT_NS" not in reject:
+    raise SystemExit("SUSFS repair: reject file does not match the expected namespace hunk.")
+
+kdp_anchor = '#ifdef CONFIG_KDP_NS\n#include <linux/kdp.h>\n#endif\n'
+if source.count(kdp_anchor) != 1:
+    raise SystemExit("SUSFS repair: expected CONFIG_KDP_NS include block was not found exactly once.")
+
+include_block = (
+    "#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\n"
+    "#include <linux/susfs_def.h>\n"
+    "#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\n"
+)
+if "#include <linux/susfs_def.h>" not in source:
+    source = source.replace(kdp_anchor, kdp_anchor + include_block, 1)
+
+internal_anchor = '#include "internal.h"\n'
+if source.count(internal_anchor) != 1:
+    raise SystemExit('SUSFS repair: expected internal.h include was not found exactly once.')
+
+# These declarations match the upstream gki-android13-5.15 SUSFS hunk.
+declaration_block = (
+    "#ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\n"
+    "extern bool susfs_is_current_ksu_domain(void);\n"
+    "extern struct static_key_true susfs_is_sdcard_android_data_not_decrypted;\n"
+    "\n"
+    "#define CL_COPY_MNT_NS BIT(25) /* used by copy_mnt_ns() */\n"
+    "\n"
+    "\n"
+    "#endif // #ifdef CONFIG_KSU_SUSFS_SUS_MOUNT\n"
+)
+if "#define CL_COPY_MNT_NS" not in source:
+    source = source.replace(internal_anchor, internal_anchor + declaration_block, 1)
+
+source_path.write_text(source)
+PY
+                rm -f fs/namespace.c.rej
+                echo -e "${green}SUSFS namespace hunk repaired.${nocol}"
+            else
+                echo -e "${red}SUSFS patch failed with unexpected conflicts.${nocol}" >&2
+                printf '%s\n' "${SUSFS_REJECTS[@]}" >&2
+                exit 1
+            fi
         fi
     fi
 }
@@ -1032,13 +1039,13 @@ Enable_SUKISU-ultra() {
         fi
         if [[ "$SUKI_MANUAL_HOOKS" == "1" ]]; then
             log_section "Started Applying SUKISU Manual Hook Patches "
-            if ! cp ReSukiSU_Manual-Hooks.diff ReSukiSU_Manual-Hooks.patch; then
+            if ! cp BakaSU_Manual-Hooks.diff BakaSU_Manual-Hooks.patch; then
                 echo -e "${red}Manual hook patch not found in $KERNELDIR ! Aborting.${nocol}"
                 exit 1
             fi
-            if patch -p1 --fuzz=3 < ReSukiSU_Manual-Hooks.patch; then
+            if patch -p1 --fuzz=3 < BakaSU_Manual-Hooks.patch; then
                 echo -e "${green}SUKISU Manual Hook Patch applied successfully.${nocol}"
-                rm -f ReSukiSU_Manual-Hooks.patch
+                rm -f BakaSU_Manual-Hooks.patch
                 echo -e "${blue}Making necessary defconfig changes .... …${nocol}"
                 ./scripts/config \
                     --file "arch/${ARCH}/configs/${KERNEL_DEFCONFIG}" \
