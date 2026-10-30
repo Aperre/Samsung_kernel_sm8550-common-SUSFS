@@ -85,7 +85,7 @@ SUSFS_CHECKOUT_HASH=""   # Specific commit SHA after cloning (empty = latest)
 # ---------------------------------------------------------------------------- #
 #                   KernelSU-Next  |  SUKISU  |  KernelSU                      #
 #                (Enable **only one** of the following options)                #
-#             Either Enable KernelSU or KernelSU-Next or SukiSU-Ultra.         #
+#             Enable only one: KernelSU, KernelSU-Next, SukiSU-Ultra, or BakaSU.         #
 # ---------------------------------------------------------------------------- #
 
 ## KernelSU-Next Options
@@ -94,11 +94,11 @@ KSU_NEXT_STABLE=1        # Select stable branch? (1 = stable, 0 = dev)
 KSU_NEXT_MANUAL_HOOKS=1  # Hooks style (1 = manual, 0 = kprobes)
 KSUN_CHECKOUT_HASH=""    # Specific KernelSU-Next commit SHA
 
-## SUKISU-Ultra Options
-ENABLE_SUKISU=1          # Use SUKISU-Ultra? (1 = yes, 0 = no)
-ENABLE_SUKISU_ULTRA=0    # Toggle SUKISU source: SukiSU-Ultra (1 = yes, 0 = no)
-ENABLE_RESUKISU=1        # Toggle SUKISU source: ReSukiSU (1 = yes, 0 = no)
-SUKI_MANUAL_HOOKS=1      # Manual Hooks for SUKISU (SUSFS version only) (1 = manual, 0 = default)
+## SukiSU-Ultra / BakaSU Options
+ENABLE_SUKISU=1          # enable SukiSU-Ultra/BakaSU (1 = yes, 0 = no)
+ENABLE_SUKISU_ULTRA=0    # Select SukiSU-Ultra (1 = yes, 0 = no)
+ENABLE_BAKASU=1        # Select BakaSU (1 = yes, 0 = no)
+SUKI_MANUAL_HOOKS=1      # Manual hooks for selected SukiSU-Ultra/BakaSU variant (SUSFS version only) (1 = manual, 0 = default)
 SUKI_TRACEPOINTS_HOOK=0  # Use tracepoint hook for Sukisu-Ultra (for SUSFS and Normal ver) (1 = enable, 0 = disabled)
 SUKI_CHECKOUT_HASH=""    # Specific SUKISU commit SHA
 PATCH_KPM=1              # Patches the kernel binary after its done compiling.
@@ -159,9 +159,9 @@ if [[ "$ENABLE_SUKISU_ULTRA" != "1" && "$ENABLE_SUKISU_ULTRA" != "0" ]]; then
     ENABLE_SUKISU_ULTRA=0
 fi
 
-if [[ "$ENABLE_RESUKISU" != "1" && "$ENABLE_RESUKISU" != "0" ]]; then
-    echo -e "${yellow}Invalid ENABLE_RESUKISU variable value; defaulting to 1${nocol}" >&2
-    ENABLE_RESUKISU=1
+if [[ "$ENABLE_BAKASU" != "1" && "$ENABLE_BAKASU" != "0" ]]; then
+    echo -e "${yellow}Invalid ENABLE_BAKASU variable value; defaulting to 1${nocol}" >&2
+    ENABLE_BAKASU=1
 fi
 
 if [[ "$ENABLE_KSU" != "1" && "$ENABLE_KSU" != "0" ]]; then
@@ -176,26 +176,26 @@ fi
 
 # SUKISU source toggle validation (only one source can be selected)
 if [[ "$ENABLE_SUKISU" == "1" ]]; then
-    if [[ "$ENABLE_SUKISU_ULTRA" == "1" && "$ENABLE_RESUKISU" == "1" ]]; then
-        echo -e "${red}Error:${nocol} Only one SUKISU source can be enabled: ENABLE_SUKISU_ULTRA or ENABLE_RESUKISU." >&2
+    if [[ "$ENABLE_SUKISU_ULTRA" == "1" && "$ENABLE_BAKASU" == "1" ]]; then
+        echo -e "${red}Error:${nocol} Only one variant source can be enabled: ENABLE_SUKISU_ULTRA or ENABLE_BAKASU." >&2
         exit 1
     fi
 
-    if [[ "$ENABLE_SUKISU_ULTRA" == "0" && "$ENABLE_RESUKISU" == "0" ]]; then
-        echo -e "${blue}Note:${nocol} No SUKISU source selected; defaulting to ReSukiSU."
-        ENABLE_RESUKISU=1
+    if [[ "$ENABLE_SUKISU_ULTRA" == "0" && "$ENABLE_BAKASU" == "0" ]]; then
+        echo -e "${blue}Note:${nocol} No variant source selected; defaulting to BakaSU."
+        ENABLE_BAKASU=1
     fi
 else
     ENABLE_SUKISU_ULTRA=0
-    ENABLE_RESUKISU=0
+    ENABLE_BAKASU=0
 fi
 
 if [[ "$ENABLE_SUKISU_ULTRA" == "1" ]]; then
     SUKISU_VARIANT_NAME="SukiSU-Ultra"
     SUKISU_SETUP_URL="https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh"
 else
-    SUKISU_VARIANT_NAME="ReSukiSU"
-    SUKISU_SETUP_URL="https://raw.githubusercontent.com/ReSukiSU/ReSukiSU/main/kernel/setup.sh"
+    SUKISU_VARIANT_NAME="BakaSU"
+    SUKISU_SETUP_URL="https://raw.githubusercontent.com/Baka-SU/BakaSU/main/kernel/setup.sh"
 fi
 
 # KernelSU-Next removed SUSFS branches, so if using KernelSU-Next do not apply susfs patches
@@ -1039,13 +1039,13 @@ Enable_SUKISU-ultra() {
         fi
         if [[ "$SUKI_MANUAL_HOOKS" == "1" ]]; then
             log_section "Started Applying SUKISU Manual Hook Patches "
-            if ! cp ReSukiSU_Manual-Hooks.diff ReSukiSU_Manual-Hooks.patch; then
+            if ! cp BakaSU_Manual-Hooks.diff BakaSU_Manual-Hooks.patch; then
                 echo -e "${red}Manual hook patch not found in $KERNELDIR ! Aborting.${nocol}"
                 exit 1
             fi
-            if patch -p1 --fuzz=3 < ReSukiSU_Manual-Hooks.patch; then
+            if patch -p1 --fuzz=3 < BakaSU_Manual-Hooks.patch; then
                 echo -e "${green}SUKISU Manual Hook Patch applied successfully.${nocol}"
-                rm -f ReSukiSU_Manual-Hooks.patch
+                rm -f BakaSU_Manual-Hooks.patch
                 echo -e "${blue}Making necessary defconfig changes .... …${nocol}"
                 ./scripts/config \
                     --file "arch/${ARCH}/configs/${KERNEL_DEFCONFIG}" \
